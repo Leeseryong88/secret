@@ -1,0 +1,68 @@
+'use client';
+
+import { Shield, Plus, MessageSquare } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface HomeViewProps {
+  onCreateClick: () => void;
+  onJoinClick: () => void;
+}
+
+export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-12"
+      >
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 text-gray-400 mb-6">
+          <Shield size={32} />
+        </div>
+        <p className="text-gray-400 text-lg max-w-xs mx-auto">
+          로그인 없이 시작하는 <br />
+          익명 채팅 서비스
+        </p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg"
+      >
+        <button
+          onClick={onCreateClick}
+          className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+        >
+          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Plus className="text-white" />
+          </div>
+          <span className="text-xl font-semibold">채팅방 만들기</span>
+          <span className="text-sm text-gray-500 mt-2">새로운 대화를 시작하세요</span>
+        </button>
+
+        <button
+          onClick={onJoinClick}
+          className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+        >
+          <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <MessageSquare className="text-white" />
+          </div>
+          <span className="text-xl font-semibold">채팅방 들어가기</span>
+          <span className="text-sm text-gray-500 mt-2">ID와 비밀번호를 입력하세요</span>
+        </button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="mt-12 text-xs text-gray-600 max-w-xs"
+      >
+        만료된 채팅방의 모든 데이터는 서버에서 영구적으로 삭제되며 복구할 수 없습니다.
+      </motion.div>
+    </div>
+  );
+}
