@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import HomeView from '@/components/HomeView';
 import CreateRoomForm from '@/components/CreateRoomForm';
 import JoinRoomForm from '@/components/JoinRoomForm';
-import ChatInterface from '@/components/ChatInterface';
+import MemoCanvas from '@/components/MemoCanvas';
 import * as chatApi from '@/lib/chat';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -17,7 +17,7 @@ export default function Home() {
   const [view, setView] = useState<ViewState>('HOME');
   const [lang, setLang] = useState<Language>('en'); // Default to English
   const [room, setRoom] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [memos, setMemos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     id: '',
@@ -53,11 +53,11 @@ export default function Home() {
     localStorage.setItem('chat-lang', newLang);
   };
 
-  // Subscribe to messages when in CHAT view
+  // Subscribe to memos when in CHAT view
   useEffect(() => {
     if (view === 'CHAT' && room?.id) {
-      const unsubscribe = chatApi.subscribeMessages(room.id, (msgs) => {
-        setMessages(msgs);
+      const unsubscribe = chatApi.subscribeMemos(room.id, (msgs) => {
+        setMemos(msgs);
       });
       return () => unsubscribe();
     }
@@ -91,15 +91,28 @@ export default function Home() {
     }
   };
 
-  const handleUpdateNickname = (newNickname: string) => {
-    setCurrentUser(prev => ({ ...prev, nickname: newNickname }));
-    localStorage.setItem('chat-nickname', newNickname);
-  };
-
-  const handleSendMessage = async (text: string) => {
+  const handleAddMemo = async (memo: any) => {
     if (!room) return;
     try {
-      await chatApi.sendMessage(room.id, text, currentUser.nickname);
+      await chatApi.addMemo(room.id, memo);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateMemo = async (id: string, updates: any) => {
+    if (!room) return;
+    try {
+      await chatApi.updateMemo(room.id, id, updates);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteMemo = async (id: string) => {
+    if (!room) return;
+    try {
+      await chatApi.deleteMemo(room.id, id);
     } catch (err) {
       console.error(err);
     }
@@ -122,7 +135,7 @@ export default function Home() {
     if (confirm(t.leaveConfirm)) {
       setView('HOME');
       setRoom(null);
-      setMessages([]);
+      setMemos([]);
     }
   };
 
@@ -175,13 +188,14 @@ export default function Home() {
               exit={{ opacity: 0, scale: 0.98 }}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <ChatInterface
+              <MemoCanvas
                 lang={lang}
                 room={room}
-                messages={messages}
+                memos={memos}
                 currentUser={currentUser}
-                onSendMessage={handleSendMessage}
-                onUpdateNickname={handleUpdateNickname}
+                onAddMemo={handleAddMemo}
+                onUpdateMemo={handleUpdateMemo}
+                onDeleteMemo={handleDeleteMemo}
                 onExtend={handleExtend}
                 onLeave={handleLeave}
               />

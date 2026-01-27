@@ -10,7 +10,8 @@ import {
   serverTimestamp,
   updateDoc,
   increment,
-  Timestamp
+  Timestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth } from './firebase';
@@ -91,32 +92,44 @@ export async function joinRoom(roomId: string, password: string) {
   };
 }
 
-export function subscribeMessages(roomId: string, callback: (messages: any[]) => void) {
+export function subscribeMemos(roomId: string, callback: (memos: any[]) => void) {
   const q = query(
-    collection(db, 'rooms', roomId, 'messages'),
+    collection(db, 'rooms', roomId, 'memos'),
     orderBy('createdAt', 'asc')
   );
 
   return onSnapshot(q, (snapshot) => {
-    const messages = snapshot.docs.map(doc => ({
+    const memos = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toMillis() || Date.now(),
     }));
-    callback(messages);
+    callback(memos);
   });
 }
 
-export async function sendMessage(roomId: string, text: string, nickname: string) {
+export async function addMemo(roomId: string, memo: { x: number; y: number; text: string; width: number; height: number; style: any }) {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
-  await addDoc(collection(db, 'rooms', roomId, 'messages'), {
-    text,
-    senderId: user.uid,
-    nickname,
+  await addDoc(collection(db, 'rooms', roomId, 'memos'), {
+    ...memo,
+    authorId: user.uid,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
+}
+
+export async function updateMemo(roomId: string, memoId: string, updates: any) {
+  const memoRef = doc(db, 'rooms', roomId, 'memos', memoId);
+  await updateDoc(memoRef, {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteMemo(roomId: string, memoId: string) {
+  const memoRef = doc(db, 'rooms', roomId, 'memos', memoId);
+  await deleteDoc(memoRef);
 }
 
 export async function extendRoom(roomId: string) {
