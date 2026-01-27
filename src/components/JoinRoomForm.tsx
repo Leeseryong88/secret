@@ -4,15 +4,18 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Lock, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Language, translations } from '@/lib/translations';
 
 interface JoinRoomFormProps {
+  lang: Language;
   onBack: () => void;
   onJoin: (roomId: string, password: string) => void;
 }
 
-export default function JoinRoomForm({ onBack, onJoin }: JoinRoomFormProps) {
+export default function JoinRoomForm({ lang, onBack, onJoin }: JoinRoomFormProps) {
   const [roomId, setRoomId] = useState('');
   const [password, setPassword] = useState('');
+  const t = translations[lang];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,23 +35,23 @@ export default function JoinRoomForm({ onBack, onJoin }: JoinRoomFormProps) {
         className="flex items-center text-gray-400 hover:text-white mb-8 transition-colors"
       >
         <ArrowLeft size={20} className="mr-2" />
-        돌아가기
+        {t.back}
       </button>
 
-      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">채팅방 입장하기</h2>
+      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">{t.join}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
         <div>
           <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
             <Key size={14} className="mr-2" />
-            방 이름
+            {t.roomName}
           </label>
           <input
             type="text"
             required
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
-            placeholder="입장할 방 이름을 입력하세요"
+            placeholder={t.roomNamePlaceholder}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm md:text-base"
           />
         </div>
@@ -56,14 +59,14 @@ export default function JoinRoomForm({ onBack, onJoin }: JoinRoomFormProps) {
         <div>
           <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
             <Lock size={14} className="mr-2" />
-            비밀번호
+            {t.password}
           </label>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder={t.passwordPlaceholder}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm md:text-base"
           />
         </div>
@@ -78,7 +81,7 @@ export default function JoinRoomForm({ onBack, onJoin }: JoinRoomFormProps) {
               : "bg-gray-800 text-gray-500 cursor-not-allowed"
           )}
         >
-          입장하기
+          {t.enter}
         </button>
       </form>
     </motion.div>

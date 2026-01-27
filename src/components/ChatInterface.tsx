@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Clock, Users, LogOut, ShieldAlert, Copy, Check, UserCircle2, Edit2 } from 'lucide-react';
 import { cn, formatTimeLeft } from '@/lib/utils';
+import { Language, translations } from '@/lib/translations';
 
 interface Message {
   id: string;
@@ -14,6 +15,7 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
+  lang: Language;
   room: {
     id: string;
     name?: string;
@@ -31,6 +33,7 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({
+  lang,
   room,
   messages,
   currentUser,
@@ -45,6 +48,7 @@ export default function ChatInterface({
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [tempNickname, setTempNickname] = useState(currentUser.nickname);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = translations[lang];
 
   useEffect(() => {
     setTempNickname(currentUser.nickname);
@@ -121,7 +125,7 @@ export default function ChatInterface({
           <button
             onClick={onLeave}
             className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400 transition-all"
-            title="방 나가기"
+            title={t.leave}
           >
             <LogOut size={20} className="md:hidden" />
             <LogOut size={24} className="hidden md:block" />
@@ -140,13 +144,13 @@ export default function ChatInterface({
           >
             <div className="flex items-center text-orange-400 text-[10px] md:text-sm">
               <ShieldAlert size={14} className="mr-2 flex-shrink-0" />
-              곧 만료됩니다.
+              {t.expireSoon}
             </div>
             <button
               onClick={onExtend}
               className="px-3 py-1 md:px-4 md:py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors whitespace-nowrap ml-2"
             >
-              4시간 연장
+              {t.extend}
             </button>
           </motion.div>
         )}
@@ -163,7 +167,7 @@ export default function ChatInterface({
               <MessageSquare size={24} className="md:hidden" />
               <MessageSquare size={32} className="hidden md:block" />
             </div>
-            <p className="text-sm md:text-base text-center px-4">아직 메시지가 없습니다. 인사를 건네보세요!</p>
+            <p className="text-sm md:text-base text-center px-4">{t.emptyMessages}</p>
           </div>
         ) : (
           messages.map((msg) => (
@@ -231,7 +235,7 @@ export default function ChatInterface({
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="메시지 입력..."
+            placeholder={t.messagePlaceholder}
             className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 md:px-6 py-2.5 md:py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-600 text-sm md:text-base"
           />
           <button

@@ -1,42 +1,72 @@
 'use client';
 
-import { Shield, Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Language, translations } from '@/lib/translations';
 
 interface HomeViewProps {
+  lang: Language;
+  setLang: (lang: Language) => void;
   onCreateClick: () => void;
   onJoinClick: () => void;
 }
 
-export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) {
+export default function HomeView({ lang, setLang, onCreateClick, onJoinClick }: HomeViewProps) {
+  const t = translations[lang];
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      {/* Language Switcher */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="absolute top-8 flex items-center space-x-2 bg-white/5 rounded-full p-1 border border-white/10"
+      >
+        <Globe size={14} className="text-gray-500 ml-2" />
+        <button
+          onClick={() => setLang('en')}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            lang === 'en' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          EN
+        </button>
+        <button
+          onClick={() => setLang('ko')}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+            lang === 'ko' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          KO
+        </button>
+      </motion.div>
+
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-lg"
+        className="flex space-x-8 md:space-x-12"
       >
+        {/* Create Room - Icon Only */}
         <button
           onClick={onCreateClick}
-          className="flex flex-col items-center justify-center p-6 md:p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+          className="flex flex-col items-center group"
+          title={t.create}
         >
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
-            <Plus className="text-white" size={20} />
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-110 group-active:scale-95 transition-all">
+            <Plus className="text-white" size={40} />
           </div>
-          <span className="text-lg md:text-xl font-semibold">채팅방 만들기</span>
-          <span className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">새로운 대화를 시작하세요</span>
         </button>
 
+        {/* Join Room - Icon Only */}
         <button
           onClick={onJoinClick}
-          className="flex flex-col items-center justify-center p-6 md:p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+          className="flex flex-col items-center group"
+          title={t.join}
         >
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-600 flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
-            <MessageSquare className="text-white" size={20} />
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/20 group-hover:scale-110 group-active:scale-95 transition-all">
+            <MessageSquare className="text-white" size={40} />
           </div>
-          <span className="text-lg md:text-xl font-semibold">채팅방 들어가기</span>
-          <span className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">ID와 비밀번호를 입력하세요</span>
         </button>
       </motion.div>
 
@@ -44,9 +74,9 @@ export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="mt-12 text-xs text-gray-600 max-w-sm"
+        className="mt-16 text-xs text-gray-600 max-w-sm leading-relaxed"
       >
-        어디서나 ID와 비밀번호만 알고있으면 채팅을 할 수 있으며 만료된 채팅방의 모든 데이터는 서버에서 영구적으로 삭제되며 복구할 수 없습니다.
+        {t.desc}
       </motion.div>
     </div>
   );

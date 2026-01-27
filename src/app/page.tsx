@@ -9,21 +9,28 @@ import ChatInterface from '@/components/ChatInterface';
 import * as chatApi from '@/lib/chat';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { Language, translations } from '@/lib/translations';
 
 type ViewState = 'HOME' | 'CREATE' | 'JOIN' | 'CHAT';
 
 export default function Home() {
   const [view, setView] = useState<ViewState>('HOME');
+  const [lang, setLang] = useState<Language>('en'); // Default to English
   const [room, setRoom] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState({
     id: '',
     nickname: '',
   });
 
+  const t = translations[lang];
+
   useEffect(() => {
+    // Initialize language from localStorage or default to English
+    const savedLang = localStorage.getItem('chat-lang') as Language;
+    if (savedLang) setLang(savedLang);
+
     // Listen to auth state changes to get the correct UID
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -33,13 +40,18 @@ export default function Home() {
 
     // Initialize user nickname
     const savedNickname = localStorage.getItem('chat-nickname');
-    const nickname = savedNickname || '익명 ' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const nickname = savedNickname || t.anonymous + ' ' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     if (!savedNickname) localStorage.setItem('chat-nickname', nickname);
     
     setCurrentUser(prev => ({ ...prev, nickname }));
 
     return () => unsubscribe();
-  }, []);
+  }, [lang, t.anonymous]);
+
+  const handleSetLang = (newLang: Language) => {
+    setLang(newLang);
+    localStorage.setItem('chat-lang', newLang);
+  };
 
   // Subscribe to messages when in CHAT view
   useEffect(() => {
@@ -53,16 +65,13 @@ export default function Home() {
 
   const handleCreateRoom = async (data: { name: string; expiresHours: number; password: string }) => {
     setLoading(true);
-    setError(null);
     try {
       const { roomId, expiresAt } = await chatApi.createRoom(data.name, data.expiresHours, data.password);
       setRoom({ id: roomId, name: data.name || roomId, expiresAt });
       setView('CHAT');
     } catch (err: any) {
       console.error(err);
-      setError('채팅방 생성에 실패했습니다. (Firebase 설정 확인 필요)');
-      // Fallback to mock for demo if needed, but better to show error
-      alert('채팅방 생성 실패: ' + err.message);
+      alert(t.createError + ': ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -70,14 +79,13 @@ export default function Home() {
 
   const handleJoinRoom = async (roomId: string, password: string) => {
     setLoading(true);
-    setError(null);
     try {
       const roomData = await chatApi.joinRoom(roomId, password);
       setRoom(roomData);
       setView('CHAT');
     } catch (err: any) {
       console.error(err);
-      alert('입장 실패: ' + err.message);
+      alert(t.joinError + ': ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -101,10 +109,6 @@ export default function Home() {
     if (!room) return;
     try {
       await chatApi.extendRoom(room.id);
-      // Room data will be updated via Firestore if we had a listener, 
-      // but for now let's manually update or rely on the fact that 
-      // the room object in state needs to be updated.
-      // In a real app, we'd listen to the room document.
       setRoom((prev: any) => ({
         ...prev,
         expiresAt: prev.expiresAt + 4 * 60 * 60 * 1000
@@ -115,7 +119,7 @@ export default function Home() {
   };
 
   const handleLeave = () => {
-    if (confirm('채팅방을 나가시겠습니까?')) {
+    if (confirm(t.leaveConfirm)) {
       setView('HOME');
       setRoom(null);
       setMessages([]);
@@ -135,6 +139,8 @@ export default function Home() {
           {view === 'HOME' && (
             <div key="home-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
               <HomeView
+                lang={lang}
+                setLang={handleSetLang}
                 onCreateClick={() => setView('CREATE')}
                 onJoinClick={() => setView('JOIN')}
               />
@@ -144,6 +150,7 @@ export default function Home() {
           {view === 'CREATE' && (
             <div key="create-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
               <CreateRoomForm
+                lang={lang}
                 onBack={() => setView('HOME')}
                 onCreate={handleCreateRoom}
               />
@@ -153,6 +160,7 @@ export default function Home() {
           {view === 'JOIN' && (
             <div key="join-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
               <JoinRoomForm
+                lang={lang}
                 onBack={() => setView('HOME')}
                 onJoin={handleJoinRoom}
               />
@@ -168,6 +176,7 @@ export default function Home() {
               className="flex-1 flex flex-col overflow-hidden"
             >
               <ChatInterface
+                lang={lang}
                 room={room}
                 messages={messages}
                 currentUser={currentUser}
@@ -184,11 +193,11 @@ export default function Home() {
       {view !== 'CHAT' && (
         <footer className="w-full py-6 text-gray-600 text-[10px] md:text-sm flex flex-col items-center space-y-1 bg-[#0a0a0a] border-t border-white/5">
           <div className="flex items-center space-x-2 md:space-x-4">
-            <span>개인정보 수집 없음</span>
+            <span>{t.footer1}</span>
             <span className="opacity-30">•</span>
-            <span>서버 로그 자동 삭제</span>
+            <span>{t.footer2}</span>
             <span className="opacity-30">•</span>
-            <span>종단간 암호화 예정</span>
+            <span>{t.footer3}</span>
           </div>
           <p className="opacity-50">© 2026 Anonymous Secret Chat. All rights reserved.</p>
         </footer>
