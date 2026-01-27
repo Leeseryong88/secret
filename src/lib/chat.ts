@@ -29,7 +29,20 @@ export async function createRoom(name: string, expiresHours: number, password: s
   const user = auth.currentUser;
   if (!user) throw new Error('Auth failed');
 
-  const roomId = Math.random().toString(36).substr(2, 8).toUpperCase();
+  if (!name.trim()) throw new Error('방 이름을 입력해주세요.');
+
+  // Use name as roomId (clean it to be URL/ID safe if necessary, but Firestore IDs can be strings)
+  const roomId = name.trim();
+  
+  // Check if room already exists and is active
+  const roomDoc = await getDoc(doc(db, 'rooms', roomId));
+  if (roomDoc.exists()) {
+    const data = roomDoc.data();
+    if (data.status === 'active' && data.expiresAt.toMillis() > Date.now()) {
+      throw new Error('이미 존재하는 방 이름입니다. 다른 이름을 사용해주세요.');
+    }
+  }
+
   const salt = Math.random().toString(36).substr(2, 8);
   const passwordHash = await hashPassword(password, salt);
   
@@ -38,7 +51,7 @@ export async function createRoom(name: string, expiresHours: number, password: s
 
   const roomData = {
     id: roomId,
-    name: name || roomId,
+    name: roomId,
     createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromMillis(expiresAt),
     passwordHash,

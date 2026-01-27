@@ -41,14 +41,14 @@ export default function JoinRoomForm({ onBack, onJoin }: JoinRoomFormProps) {
         <div>
           <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
             <Key size={14} className="mr-2" />
-            채팅방 ID
+            방 이름
           </label>
           <input
             type="text"
             required
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
-            placeholder="Room ID를 입력하세요"
+            placeholder="입장할 방 이름을 입력하세요"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm md:text-base"
           />
         </div>

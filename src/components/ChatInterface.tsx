@@ -106,7 +106,7 @@ export default function ChatInterface({
                 onClick={copyRoomId}
                 className="flex items-center hover:text-white transition-colors mr-3 whitespace-nowrap"
               >
-                ID: {room.id}
+                {room.id}
                 {copied ? <Check size={10} className="ml-1 text-emerald-500" /> : <Copy size={10} className="ml-1" />}
               </button>
               <div className="flex items-center text-orange-400 whitespace-nowrap">

@@ -42,15 +42,19 @@ export default function CreateRoomForm({ onBack, onCreate }: CreateRoomFormProps
         <div>
           <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
             <Hash size={14} className="mr-2" />
-            방 이름 (선택)
+            방 이름 (필수)
           </label>
           <input
             type="text"
+            required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="비밀스러운 대화방"
+            placeholder="대화방 이름을 입력하세요"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm md:text-base"
           />
+          <p className="text-[10px] text-gray-500 mt-2">
+            방 이름이 곧 입장 ID가 됩니다.
+          </p>
         </div>
 
         <div>
