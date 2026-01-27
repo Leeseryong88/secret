@@ -248,8 +248,6 @@ export default function ChatInterface({
     </div>
   );
 }
-  );
-}
 
 function MessageSquare({ size }: { size: number }) {
   return (
