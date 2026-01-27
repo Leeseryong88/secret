@@ -89,37 +89,38 @@ export default function ChatInterface({
   const showExtendButton = timeLeft > 0 && timeLeft <= 7200; // 2 hours in seconds
 
   return (
-    <div className="flex flex-col h-[90vh] max-w-4xl mx-auto w-full bg-black/40 rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full w-full bg-black md:bg-black/40 md:rounded-3xl md:border border-white/10 overflow-hidden md:shadow-2xl">
       {/* Header */}
-      <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-500">
-            <Users size={20} />
+      <div className="p-3 md:p-4 border-b border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-between z-10">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-500 flex-shrink-0">
+            <Users size={16} className="md:hidden" />
+            <Users size={20} className="hidden md:block" />
           </div>
-          <div>
-            <h3 className="font-bold text-lg leading-tight truncate max-w-[150px] md:max-w-[300px]">
+          <div className="min-w-0">
+            <h3 className="font-bold text-sm md:text-lg leading-tight truncate">
               {room.name || room.id}
             </h3>
-            <div className="flex items-center text-xs text-gray-500 mt-1">
+            <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
               <button 
                 onClick={copyRoomId}
-                className="flex items-center hover:text-white transition-colors mr-3"
+                className="flex items-center hover:text-white transition-colors mr-3 whitespace-nowrap"
               >
                 ID: {room.id}
-                {copied ? <Check size={12} className="ml-1 text-emerald-500" /> : <Copy size={12} className="ml-1" />}
+                {copied ? <Check size={10} className="ml-1 text-emerald-500" /> : <Copy size={10} className="ml-1" />}
               </button>
-              <div className="flex items-center text-orange-400">
-                <Clock size={12} className="mr-1" />
+              <div className="flex items-center text-orange-400 whitespace-nowrap">
+                <Clock size={10} className="mr-1" />
                 {formatTimeLeft(timeLeft)}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 md:space-x-2">
           {/* Nickname Editor */}
-          <div className="hidden md:flex items-center bg-white/5 rounded-full px-3 py-1 border border-white/10 mr-2">
-            <UserCircle2 size={14} className="text-gray-400 mr-2" />
+          <div className="flex items-center bg-white/5 rounded-full px-2 md:px-3 py-1 border border-white/10">
+            <UserCircle2 size={12} className="text-gray-400 mr-1 md:mr-2 md:block hidden" />
             {isEditingNickname ? (
               <form onSubmit={handleNicknameSubmit} className="flex items-center">
                 <input
@@ -127,14 +128,14 @@ export default function ChatInterface({
                   value={tempNickname}
                   onChange={(e) => setTempNickname(e.target.value)}
                   onBlur={handleNicknameSubmit}
-                  className="bg-transparent text-xs text-white focus:outline-none w-20"
+                  className="bg-transparent text-[10px] md:text-xs text-white focus:outline-none w-16 md:w-20"
                 />
               </form>
             ) : (
               <div className="flex items-center">
-                <span className="text-xs text-gray-300 mr-2">{currentUser.nickname}</span>
+                <span className="text-[10px] md:text-xs text-gray-300 mr-1 md:mr-2 max-w-[60px] md:max-w-none truncate">{currentUser.nickname}</span>
                 <button onClick={() => setIsEditingNickname(true)} className="text-gray-500 hover:text-white">
-                  <Edit2 size={12} />
+                  <Edit2 size={10} />
                 </button>
               </div>
             )}
@@ -142,10 +143,11 @@ export default function ChatInterface({
 
           <button
             onClick={onLeave}
-            className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400 transition-all"
+            className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400 transition-all"
             title="방 나가기"
           >
-            <LogOut size={24} />
+            <LogOut size={20} className="md:hidden" />
+            <LogOut size={24} className="hidden md:block" />
           </button>
         </div>
       </div>
@@ -157,15 +159,15 @@ export default function ChatInterface({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-orange-500/10 border-b border-orange-500/20 p-3 flex items-center justify-between"
+            className="bg-orange-500/10 border-b border-orange-500/20 p-2 md:p-3 flex items-center justify-between"
           >
-            <div className="flex items-center text-orange-400 text-sm">
-              <ShieldAlert size={16} className="mr-2" />
-              방이 곧 만료됩니다. 대화를 더 이어가시겠습니까?
+            <div className="flex items-center text-orange-400 text-[10px] md:text-sm">
+              <ShieldAlert size={14} className="mr-2 flex-shrink-0" />
+              곧 만료됩니다.
             </div>
             <button
               onClick={onExtend}
-              className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition-colors"
+              className="px-3 py-1 md:px-4 md:py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors whitespace-nowrap ml-2"
             >
               4시간 연장
             </button>
@@ -176,35 +178,36 @@ export default function ChatInterface({
       {/* Messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10"
+        className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 scrollbar-thin scrollbar-thumb-white/10"
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-4">
-            <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-800 flex items-center justify-center">
-              <MessageSquare size={32} />
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-dashed border-gray-800 flex items-center justify-center">
+              <MessageSquare size={24} className="md:hidden" />
+              <MessageSquare size={32} className="hidden md:block" />
             </div>
-            <p>아직 메시지가 없습니다. 첫 인사를 건네보세요!</p>
+            <p className="text-sm md:text-base text-center px-4">아직 메시지가 없습니다. 인사를 건네보세요!</p>
           </div>
         ) : (
           messages.map((msg) => (
             <div
               key={msg.id}
               className={cn(
-                "flex flex-col max-w-[80%]",
+                "flex flex-col max-w-[85%] md:max-w-[80%]",
                 msg.senderId === currentUser.id ? "ml-auto items-end" : "items-start"
               )}
             >
               <div className="flex items-center space-x-2 mb-1 px-1">
-                <span className="text-xs font-medium text-gray-500">
+                <span className="text-[10px] md:text-xs font-medium text-gray-500">
                   {msg.nickname}
                 </span>
-                <span className="text-[10px] text-gray-700">
+                <span className="text-[9px] md:text-[10px] text-gray-700">
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <div
                 className={cn(
-                  "px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words",
+                  "px-3 py-2 md:px-4 md:py-2.5 rounded-2xl text-xs md:text-sm leading-relaxed break-words",
                   msg.senderId === currentUser.id
                     ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-600/10"
                     : "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
@@ -218,30 +221,33 @@ export default function ChatInterface({
       </div>
 
       {/* Input */}
-      <div className="p-4 bg-white/5 border-t border-white/10">
-        <form onSubmit={handleSend} className="flex space-x-3">
+      <div className="p-3 md:p-4 bg-white/5 border-t border-white/10 pb-safe">
+        <form onSubmit={handleSend} className="flex space-x-2 md:space-x-3">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="메시지를 입력하세요..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-600"
+            placeholder="메시지 입력..."
+            className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 md:px-6 py-2.5 md:py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-600 text-sm md:text-base"
           />
           <button
             type="submit"
             disabled={!inputText.trim()}
             className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+              "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-all flex-shrink-0",
               inputText.trim()
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:scale-105"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 active:scale-95"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             )}
           >
-            <Send size={20} />
+            <Send size={18} className="md:hidden" />
+            <Send size={20} className="hidden md:block" />
           </button>
         </form>
       </div>
     </div>
+  );
+}
   );
 }
 

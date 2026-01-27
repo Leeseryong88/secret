@@ -36,12 +36,12 @@ export default function CreateRoomForm({ onBack, onCreate }: CreateRoomFormProps
         돌아가기
       </button>
 
-      <h2 className="text-3xl font-bold mb-8">새 채팅방 만들기</h2>
+      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">새 채팅방 만들기</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center">
-            <Hash size={16} className="mr-2" />
+          <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
+            <Hash size={14} className="mr-2" />
             방 이름 (선택)
           </label>
           <input
@@ -49,7 +49,7 @@ export default function CreateRoomForm({ onBack, onCreate }: CreateRoomFormProps
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="비밀스러운 대화방"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm md:text-base"
           />
         </div>
 

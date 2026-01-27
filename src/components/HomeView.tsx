@@ -30,28 +30,28 @@ export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg"
+        className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-lg"
       >
         <button
           onClick={onCreateClick}
-          className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+          className="flex flex-col items-center justify-center p-6 md:p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <Plus className="text-white" />
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
+            <Plus className="text-white" size={20} />
           </div>
-          <span className="text-xl font-semibold">채팅방 만들기</span>
-          <span className="text-sm text-gray-500 mt-2">새로운 대화를 시작하세요</span>
+          <span className="text-lg md:text-xl font-semibold">채팅방 만들기</span>
+          <span className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">새로운 대화를 시작하세요</span>
         </button>
 
         <button
           onClick={onJoinClick}
-          className="flex flex-col items-center justify-center p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+          className="flex flex-col items-center justify-center p-6 md:p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
         >
-          <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <MessageSquare className="text-white" />
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-600 flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
+            <MessageSquare className="text-white" size={20} />
           </div>
-          <span className="text-xl font-semibold">채팅방 들어가기</span>
-          <span className="text-sm text-gray-500 mt-2">ID와 비밀번호를 입력하세요</span>
+          <span className="text-lg md:text-xl font-semibold">채팅방 들어가기</span>
+          <span className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">ID와 비밀번호를 입력하세요</span>
         </button>
       </motion.div>
 

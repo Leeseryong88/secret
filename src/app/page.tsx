@@ -112,46 +112,49 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-4 md:p-8">
+    <main className="h-screen h-[svh] bg-[#0a0a0a] text-white flex flex-col items-center overflow-hidden">
       {loading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
 
-      <div className="w-full max-w-5xl">
+      <div className="w-full max-w-5xl flex-1 flex flex-col overflow-hidden">
         <AnimatePresence mode="wait">
           {view === 'HOME' && (
-            <HomeView
-              key="home"
-              onCreateClick={() => setView('CREATE')}
-              onJoinClick={() => setView('JOIN')}
-            />
+            <div key="home-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
+              <HomeView
+                onCreateClick={() => setView('CREATE')}
+                onJoinClick={() => setView('JOIN')}
+              />
+            </div>
           )}
 
           {view === 'CREATE' && (
-            <CreateRoomForm
-              key="create"
-              onBack={() => setView('HOME')}
-              onCreate={handleCreateRoom}
-            />
+            <div key="create-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
+              <CreateRoomForm
+                onBack={() => setView('HOME')}
+                onCreate={handleCreateRoom}
+              />
+            </div>
           )}
 
           {view === 'JOIN' && (
-            <JoinRoomForm
-              key="join"
-              onBack={() => setView('HOME')}
-              onJoin={handleJoinRoom}
-            />
+            <div key="join-container" className="flex-1 flex flex-col justify-center overflow-y-auto px-4 py-8">
+              <JoinRoomForm
+                onBack={() => setView('HOME')}
+                onJoin={handleJoinRoom}
+              />
+            </div>
           )}
 
           {view === 'CHAT' && room && (
             <motion.div
               key="chat"
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full"
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="flex-1 flex flex-col overflow-hidden"
             >
               <ChatInterface
                 room={room}
@@ -167,16 +170,18 @@ export default function Home() {
         </AnimatePresence>
       </div>
 
-      <footer className="mt-12 text-gray-600 text-sm flex flex-col items-center space-y-2">
-        <div className="flex items-center space-x-4">
-          <span>개인정보 수집 없음</span>
-          <span>•</span>
-          <span>서버 로그 자동 삭제</span>
-          <span>•</span>
-          <span>종단간 암호화 예정</span>
-        </div>
-        <p>© 2026 Anonymous Secret Chat. All rights reserved.</p>
-      </footer>
+      {view !== 'CHAT' && (
+        <footer className="w-full py-6 text-gray-600 text-[10px] md:text-sm flex flex-col items-center space-y-1 bg-[#0a0a0a] border-t border-white/5">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <span>개인정보 수집 없음</span>
+            <span className="opacity-30">•</span>
+            <span>서버 로그 자동 삭제</span>
+            <span className="opacity-30">•</span>
+            <span>종단간 암호화 예정</span>
+          </div>
+          <p className="opacity-50">© 2026 Anonymous Secret Chat. All rights reserved.</p>
+        </footer>
+      )}
     </main>
   );
 }
