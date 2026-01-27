@@ -7,6 +7,8 @@ import CreateRoomForm from '@/components/CreateRoomForm';
 import JoinRoomForm from '@/components/JoinRoomForm';
 import ChatInterface from '@/components/ChatInterface';
 import * as chatApi from '@/lib/chat';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 type ViewState = 'HOME' | 'CREATE' | 'JOIN' | 'CHAT';
 
@@ -22,12 +24,21 @@ export default function Home() {
   });
 
   useEffect(() => {
+    // Listen to auth state changes to get the correct UID
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(prev => ({ ...prev, id: user.uid }));
+      }
+    });
+
     // Initialize user nickname
     const savedNickname = localStorage.getItem('chat-nickname');
     const nickname = savedNickname || '익명 ' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     if (!savedNickname) localStorage.setItem('chat-nickname', nickname);
     
     setCurrentUser(prev => ({ ...prev, nickname }));
+
+    return () => unsubscribe();
   }, []);
 
   // Subscribe to messages when in CHAT view

@@ -118,29 +118,6 @@ export default function ChatInterface({
         </div>
 
         <div className="flex items-center space-x-1 md:space-x-2">
-          {/* Nickname Editor */}
-          <div className="flex items-center bg-white/5 rounded-full px-2 md:px-3 py-1 border border-white/10">
-            <UserCircle2 size={12} className="text-gray-400 mr-1 md:mr-2 md:block hidden" />
-            {isEditingNickname ? (
-              <form onSubmit={handleNicknameSubmit} className="flex items-center">
-                <input
-                  autoFocus
-                  value={tempNickname}
-                  onChange={(e) => setTempNickname(e.target.value)}
-                  onBlur={handleNicknameSubmit}
-                  className="bg-transparent text-[10px] md:text-xs text-white focus:outline-none w-16 md:w-20"
-                />
-              </form>
-            ) : (
-              <div className="flex items-center">
-                <span className="text-[10px] md:text-xs text-gray-300 mr-1 md:mr-2 max-w-[60px] md:max-w-none truncate">{currentUser.nickname}</span>
-                <button onClick={() => setIsEditingNickname(true)} className="text-gray-500 hover:text-white">
-                  <Edit2 size={10} />
-                </button>
-              </div>
-            )}
-          </div>
-
           <button
             onClick={onLeave}
             className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400 transition-all"
@@ -222,7 +199,34 @@ export default function ChatInterface({
 
       {/* Input */}
       <div className="p-3 md:p-4 bg-white/5 border-t border-white/10 pb-safe">
-        <form onSubmit={handleSend} className="flex space-x-2 md:space-x-3">
+        <form onSubmit={handleSend} className="flex items-center space-x-2 md:space-x-3">
+          {/* Nickname Editor (Left of input) */}
+          <div className="flex items-center bg-white/10 rounded-2xl px-3 py-2.5 md:py-3 border border-white/10 flex-shrink-0">
+            {isEditingNickname ? (
+              <div className="flex items-center">
+                <input
+                  autoFocus
+                  value={tempNickname}
+                  onChange={(e) => setTempNickname(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNicknameSubmit(e)}
+                  onBlur={handleNicknameSubmit}
+                  className="bg-transparent text-xs md:text-sm text-white focus:outline-none w-16 md:w-24"
+                />
+              </div>
+            ) : (
+              <button 
+                type="button"
+                onClick={() => setIsEditingNickname(true)}
+                className="flex items-center group"
+              >
+                <span className="text-xs md:text-sm text-blue-400 font-medium max-w-[60px] md:max-w-[100px] truncate mr-1 group-hover:text-blue-300">
+                  {currentUser.nickname}
+                </span>
+                <Edit2 size={12} className="text-gray-500 group-hover:text-gray-300" />
+              </button>
+            )}
+          </div>
+
           <input
             type="text"
             value={inputText}
