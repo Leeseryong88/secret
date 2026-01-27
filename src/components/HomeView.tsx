@@ -10,22 +10,7 @@ interface HomeViewProps {
 
 export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-12"
-      >
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 text-gray-400 mb-6">
-          <Shield size={32} />
-        </div>
-        <p className="text-gray-400 text-lg max-w-xs mx-auto">
-          로그인 없이 시작하는 <br />
-          익명 채팅 서비스
-        </p>
-      </motion.div>
-
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -59,9 +44,9 @@ export default function HomeView({ onCreateClick, onJoinClick }: HomeViewProps) 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="mt-12 text-xs text-gray-600 max-w-xs"
+        className="mt-12 text-xs text-gray-600 max-w-sm"
       >
-        만료된 채팅방의 모든 데이터는 서버에서 영구적으로 삭제되며 복구할 수 없습니다.
+        어디서나 ID와 비밀번호만 알고있으면 채팅을 할 수 있으며 만료된 채팅방의 모든 데이터는 서버에서 영구적으로 삭제되며 복구할 수 없습니다.
       </motion.div>
     </div>
   );
