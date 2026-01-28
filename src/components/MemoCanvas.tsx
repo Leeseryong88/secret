@@ -66,8 +66,18 @@ export default function MemoCanvas({
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0 });
+  const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
+
+  const memoColors = [
+    '#fef3c7', // Yellow
+    '#dcfce7', // Green
+    '#dbeafe', // Blue
+    '#fce7f3', // Pink
+    '#f3f4f6', // White/Gray
+    '#ede9fe', // Purple
+  ];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -77,12 +87,24 @@ export default function MemoCanvas({
     return () => clearInterval(timer);
   }, [room.expiresAt]);
 
-  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
-    if (e.target !== containerRef.current) return;
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (e.target !== containerRef.current) {
+      setShowColorPicker(null);
+      return;
+    }
     
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - canvasPos.x;
-    const y = e.clientY - rect.top - canvasPos.y;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setShowColorPicker({ x, y });
+  };
+
+  const createMemo = (color: string) => {
+    if (!showColorPicker) return;
+
+    const x = showColorPicker.x - canvasPos.x;
+    const y = showColorPicker.y - canvasPos.y;
 
     onAddMemo({
       text: '',
@@ -93,9 +115,10 @@ export default function MemoCanvas({
       style: {
         fontSize: 14,
         isBold: false,
-        color: '#fef3c7', // light yellow
+        color,
       }
     });
+    setShowColorPicker(null);
   };
 
   const copyRoomId = () => {
@@ -107,20 +130,20 @@ export default function MemoCanvas({
   const showExtendButton = timeLeft > 0 && timeLeft <= 7200;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#111] overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-[#f8f9fa] overflow-hidden relative">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-white/5 bg-black/60 backdrop-blur-md flex items-center justify-between z-30">
+      <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-30">
         <div className="flex items-center space-x-3">
           <div className="min-w-0">
-            <h3 className="font-bold text-sm md:text-lg leading-tight truncate text-white">
+            <h3 className="font-bold text-sm md:text-lg leading-tight truncate text-black">
               {room.name || room.id}
             </h3>
             <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
-              <button onClick={copyRoomId} className="flex items-center hover:text-white transition-colors mr-3">
+              <button onClick={copyRoomId} className="flex items-center hover:text-black transition-colors mr-3">
                 {room.id}
-                {copied ? <Check size={10} className="ml-1 text-emerald-500" /> : <Copy size={10} className="ml-1" />}
+                {copied ? <Check size={10} className="ml-1 text-emerald-600" /> : <Copy size={10} className="ml-1" />}
               </button>
-              <div className="flex items-center text-orange-400">
+              <div className="flex items-center text-orange-600 font-medium">
                 <Clock size={10} className="mr-1" />
                 {formatTimeLeft(timeLeft)}
               </div>
@@ -139,7 +162,7 @@ export default function MemoCanvas({
           )}
           <button
             onClick={onLeave}
-            className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400 transition-all"
+            className="p-1.5 md:p-2 hover:bg-black/5 rounded-full text-gray-400 hover:text-red-500 transition-all"
           >
             <LogOut size={20} />
           </button>
@@ -150,7 +173,7 @@ export default function MemoCanvas({
       <div 
         ref={containerRef}
         className="flex-1 w-full h-full cursor-crosshair relative overflow-hidden"
-        onDoubleClick={handleCanvasDoubleClick}
+        onClick={handleCanvasClick}
       >
         <motion.div
           drag
@@ -160,9 +183,9 @@ export default function MemoCanvas({
           style={{ x: canvasPos.x, y: canvasPos.y }}
         >
           {/* Grid Background */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
+          <div className="absolute inset-0 pointer-events-none opacity-[0.2]" 
             style={{ 
-              backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', 
+              backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', 
               backgroundSize: '40px 40px',
               width: '10000px',
               height: '10000px',
@@ -179,10 +202,33 @@ export default function MemoCanvas({
             />
           ))}
         </motion.div>
+
+        {/* Color Picker Overlay */}
+        <AnimatePresence>
+          {showColorPicker && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              className="absolute z-50 p-2 bg-white rounded-xl shadow-2xl border border-black/5 flex space-x-2"
+              style={{ left: showColorPicker.x - 80, top: showColorPicker.y + 10 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {memoColors.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => createMemo(color)}
+                  className="w-8 h-8 rounded-lg border border-black/5 hover:scale-110 active:scale-95 transition-all shadow-sm"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none">
-        Double click anywhere to create a memo • Drag canvas to pan
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm">
+        Click anywhere to choose a color and create a memo • Drag canvas to pan
       </div>
     </div>
   );
