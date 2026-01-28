@@ -143,13 +143,13 @@ export default function Home() {
     localStorage.setItem('chat-nickname', newNickname);
   };
 
-  const handleExtend = async () => {
+  const handleExtend = async (hours: number) => {
     if (!room) return;
     try {
-      await chatApi.extendRoom(room.id);
+      await chatApi.extendRoom(room.id, hours);
       setRoom((prev: any) => ({
         ...prev,
-        expiresAt: prev.expiresAt + 4 * 60 * 60 * 1000
+        expiresAt: prev.expiresAt + hours * 60 * 60 * 1000
       }));
     } catch (err) {
       console.error(err);

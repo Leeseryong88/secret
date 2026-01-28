@@ -160,7 +160,7 @@ export async function deleteMemo(roomId: string, memoId: string) {
   await deleteDoc(memoRef);
 }
 
-export async function extendRoom(roomId: string) {
+export async function extendRoom(roomId: string, hours: number) {
   const roomRef = doc(db, 'rooms', roomId);
   const roomDoc = await getDoc(roomRef);
   
@@ -168,7 +168,7 @@ export async function extendRoom(roomId: string) {
   
   const data = roomDoc.data();
   const currentExpiresAt = data.expiresAt.toMillis();
-  const newExpiresAt = currentExpiresAt + 4 * 60 * 60 * 1000;
+  const newExpiresAt = currentExpiresAt + hours * 60 * 60 * 1000;
 
   await updateDoc(roomRef, {
     expiresAt: Timestamp.fromMillis(newExpiresAt),

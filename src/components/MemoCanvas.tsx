@@ -49,7 +49,7 @@ interface MemoCanvasProps {
   onAddMemo: (memo: Omit<Memo, 'id'>) => void;
   onUpdateMemo: (id: string, updates: Partial<Memo>) => void;
   onDeleteMemo: (id: string) => void;
-  onExtend: () => void;
+  onExtend: (hours: number) => void;
   onLeave: () => void;
 }
 
@@ -67,6 +67,9 @@ export default function MemoCanvas({
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
+  const [showExtendPicker, setShowExtendPicker] = useState(false);
+  const [extendVal, setExtendVal] = useState(24);
+  const [extendUnit, setExtendUnit] = useState<'h' | 'd'>('h');
   const [viewportSize, setViewportSize] = useState({ width: 1000, height: 1000 });
   
   // Use MotionValues for smooth, high-frequency updates without re-renders
@@ -224,10 +227,44 @@ export default function MemoCanvas({
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2 pointer-events-auto">
+        <div className="flex items-center space-x-2 pointer-events-auto relative">
           <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">{Math.round(syncState.scale * 100)}%</div>
-          {timeLeft > 0 && timeLeft <= 7200 && (
-            <button onClick={onExtend} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
+          {timeLeft > 0 && timeLeft <= 86400 && (
+            <div className="relative">
+              <button onClick={() => setShowExtendPicker(!showExtendPicker)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
+              
+              <AnimatePresence>
+                {showExtendPicker && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 mt-2 p-4 bg-white rounded-xl shadow-2xl border border-black/5 w-64 z-[60]">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="flex-1 flex items-center bg-black/5 rounded-lg overflow-hidden">
+                        <input type="number" value={extendVal} onChange={(e) => setExtendVal(Math.max(1, parseInt(e.target.value) || 1))} className="w-full bg-transparent px-2 py-1.5 focus:outline-none text-xs text-black font-bold" />
+                      </div>
+                      <div className="flex bg-black/5 p-0.5 rounded-lg">
+                        {(['h', 'd'] as const).map((u) => (
+                          <button key={u} onClick={() => setExtendUnit(u)} className={cn("px-2 py-1 rounded-md text-[10px] font-bold transition-all", extendUnit === u ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}>
+                            {u === 'h' ? t.hour : t.day}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const mins = extendUnit === 'h' ? extendVal * 60 : extendVal * 24 * 60;
+                        if (mins > 0 && mins <= 10080) {
+                          onExtend(mins / 60);
+                          setShowExtendPicker(false);
+                        }
+                      }} 
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                    >
+                      {t.enter}
+                    </button>
+                    <p className="text-[9px] text-gray-400 mt-2 text-center">{t.min10Mins} • {t.max7Days}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
           <button onClick={onLeave} className="p-1.5 md:p-2 hover:bg-black/5 rounded-full text-gray-400 hover:text-red-500 transition-all"><LogOut size={20} /></button>
         </div>

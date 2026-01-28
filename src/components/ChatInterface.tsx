@@ -28,7 +28,7 @@ interface ChatInterfaceProps {
   };
   onSendMessage: (text: string) => void;
   onUpdateNickname: (newNickname: string) => void;
-  onExtend: () => void;
+  onExtend: (hours: number) => void;
   onLeave: () => void;
 }
 
@@ -45,6 +45,9 @@ export default function ChatInterface({
   const [inputText, setInputText] = useState('');
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
+  const [showExtendPicker, setShowExtendPicker] = useState(false);
+  const [extendVal, setExtendVal] = useState(24);
+  const [extendUnit, setExtendUnit] = useState<'h' | 'd'>('h');
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [tempNickname, setTempNickname] = useState(currentUser.nickname);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -111,17 +114,49 @@ export default function ChatInterface({
             </div>
           </div>
         </div>
-        <button onClick={onLeave} className="p-1.5 md:p-2 hover:bg-black/5 rounded-full text-gray-400 hover:text-red-500 transition-all"><LogOut size={20} /></button>
+        <div className="flex items-center space-x-2 relative">
+          {timeLeft > 0 && timeLeft <= 86400 && (
+            <div className="relative">
+              <button onClick={() => setShowExtendPicker(!showExtendPicker)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
+              
+              <AnimatePresence>
+                {showExtendPicker && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 mt-2 p-4 bg-white rounded-xl shadow-2xl border border-black/5 w-64 z-[60]">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="flex-1 flex items-center bg-black/5 rounded-lg overflow-hidden">
+                        <input type="number" value={extendVal} onChange={(e) => setExtendVal(Math.max(1, parseInt(e.target.value) || 1))} className="w-full bg-transparent px-2 py-1.5 focus:outline-none text-xs text-black font-bold" />
+                      </div>
+                      <div className="flex bg-black/5 p-0.5 rounded-lg">
+                        {(['h', 'd'] as const).map((u) => (
+                          <button key={u} type="button" onClick={() => setExtendUnit(u)} className={cn("px-2 py-1 rounded-md text-[10px] font-bold transition-all", extendUnit === u ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}>
+                            {u === 'h' ? t.hour : t.day}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const mins = extendUnit === 'h' ? extendVal * 60 : extendVal * 24 * 60;
+                        if (mins > 0 && mins <= 10080) {
+                          onExtend(mins / 60);
+                          setShowExtendPicker(false);
+                        }
+                      }} 
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                    >
+                      {t.enter}
+                    </button>
+                    <p className="text-[9px] text-gray-400 mt-2 text-center">{t.min10Mins} • {t.max7Days}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          <button onClick={onLeave} className="p-1.5 md:p-2 hover:bg-black/5 rounded-full text-gray-400 hover:text-red-500 transition-all"><LogOut size={20} /></button>
+        </div>
       </div>
 
-      <AnimatePresence>
-        {timeLeft > 0 && timeLeft <= 7200 && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-orange-50 border-b border-orange-100 p-2 md:p-3 flex items-center justify-between">
-            <div className="flex items-center text-orange-600 text-[10px] md:text-sm"><ShieldAlert size={14} className="mr-2" />{t.expireSoon}</div>
-            <button onClick={onExtend} className="px-3 py-1 md:px-4 md:py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 bg-[#f8f9fa]">
         {messages.length === 0 ? (
