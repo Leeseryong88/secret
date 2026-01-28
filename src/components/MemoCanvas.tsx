@@ -13,7 +13,8 @@ import {
   Trash2, 
   Bold,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Edit2
 } from 'lucide-react';
 import { cn, formatTimeLeft } from '@/lib/utils';
 import { Language, translations } from '@/lib/translations';
@@ -68,7 +69,7 @@ export default function MemoCanvas({
   const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
-  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [viewportSize, setViewportSize] = useState({ width: 1000, height: 1000 });
   const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,7 +120,6 @@ export default function MemoCanvas({
   }, [room.expiresAt]);
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    // Only start canvas drag if clicking the background grid/canvas
     if (e.target === containerRef.current || e.target === canvasRef.current || (e.target as HTMLElement).id === 'grid-bg') {
       dragStartPos.current = { x: e.clientX, y: e.clientY };
       canvasDragControls.start(e);
@@ -182,20 +182,15 @@ export default function MemoCanvas({
 
   return (
     <div className="flex flex-col h-full w-full bg-[#f8f9fa] overflow-hidden relative">
-      {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-30 pointer-events-none">
         <div className="flex items-center space-x-3 pointer-events-auto text-black">
           <div className="min-w-0">
-            <h3 className="font-bold text-sm md:text-lg leading-tight truncate">
-              {room.name || room.id}
-            </h3>
+            <h3 className="font-bold text-sm md:text-lg leading-tight truncate">{room.name || room.id}</h3>
             <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
               <button onClick={copyRoomId} className="flex items-center hover:text-black transition-colors mr-3">
                 {room.id} {copied ? <Check size={10} className="ml-1 text-emerald-600" /> : <Copy size={10} className="ml-1" />}
               </button>
-              <div className="flex items-center text-orange-600 font-medium">
-                <Clock size={10} className="mr-1" /> {formatTimeLeft(timeLeft)}
-              </div>
+              <div className="flex items-center text-orange-600 font-medium"><Clock size={10} className="mr-1" /> {formatTimeLeft(timeLeft)}</div>
             </div>
           </div>
         </div>
@@ -208,7 +203,6 @@ export default function MemoCanvas({
         </div>
       </div>
 
-      {/* Canvas Container */}
       <div 
         ref={containerRef}
         className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
@@ -219,10 +213,7 @@ export default function MemoCanvas({
       >
         <motion.div
           ref={canvasRef}
-          drag
-          dragControls={canvasDragControls}
-          dragListener={false}
-          dragMomentum={false}
+          drag dragControls={canvasDragControls} dragListener={false} dragMomentum={false}
           onDrag={(e, info) => setCanvasPos(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
           className="absolute inset-0"
           style={{ x: canvasPos.x, y: canvasPos.y, scale, transformOrigin: '0 0' }}
@@ -235,7 +226,6 @@ export default function MemoCanvas({
           ))}
         </motion.div>
 
-        {/* Color Picker */}
         <AnimatePresence>
           {showColorPicker && (
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} className="absolute z-50 p-2 bg-white rounded-xl shadow-2xl border border-black/5 flex space-x-2" style={{ left: showColorPicker.x - 80, top: showColorPicker.y + 10 }} onClick={(e) => e.stopPropagation()}>
@@ -248,7 +238,7 @@ export default function MemoCanvas({
 
         <Minimap memos={memos} canvasPos={canvasPos} scale={scale} viewportSize={viewportSize} onJump={(newPos) => setCanvasPos(newPos)} />
       </div>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm text-center">Click to create memo • Drag to pan • Ctrl+Scroll to zoom</div>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm text-center leading-tight">Click to create memo • Drag to pan • Ctrl+Scroll to zoom</div>
     </div>
   );
 }
@@ -263,10 +253,15 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
     const viewW = viewportSize.width / scale;
     const viewH = viewportSize.height / scale;
 
-    let minX = Math.min(viewX, ...memos.map(m => m.x), 0) - 500;
-    let minY = Math.min(viewY, ...memos.map(m => m.y), 0) - 500;
-    let maxX = Math.max(viewX + viewW, ...memos.map(m => m.x + m.width), 1000) + 500;
-    let maxY = Math.max(viewY + viewH, ...memos.map(m => m.y + m.height), 1000) + 500;
+    const allX = memos.length > 0 ? memos.map(m => m.x) : [0];
+    const allY = memos.length > 0 ? memos.map(m => m.y) : [0];
+    const allXEnd = memos.length > 0 ? memos.map(m => m.x + m.width) : [1000];
+    const allYEnd = memos.length > 0 ? memos.map(m => m.y + m.height) : [1000];
+
+    const minX = Math.min(viewX, ...allX) - 200;
+    const minY = Math.min(viewY, ...allY) - 200;
+    const maxX = Math.max(viewX + viewW, ...allXEnd) + 200;
+    const maxY = Math.max(viewY + viewH, ...allYEnd) + 200;
     
     return { minX, minY, maxX, maxY };
   }, [memos, canvasPos, scale, viewportSize]);
@@ -275,7 +270,7 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
   const toMapCoord = (x: number, y: number) => ({ x: (x - bounds.minX) * mapScale, y: (y - bounds.minY) * mapScale });
 
   const handleMapClick = (e: React.PointerEvent) => {
-    e.stopPropagation(); // CRITICAL: Prevent canvas drag
+    e.stopPropagation();
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const targetCenterX = (e.clientX - rect.left) / mapScale + bounds.minX;
@@ -283,16 +278,21 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
     onJump({ x: -(targetCenterX - (viewportSize.width / scale) / 2) * scale, y: -(targetCenterY - (viewportSize.height / scale) / 2) * scale });
   };
 
-  const vRect = { x: (-canvasPos.x / scale - bounds.minX) * mapScale, y: (-canvasPos.y / scale - bounds.minY) * mapScale, w: (viewportSize.width / scale) * mapScale, h: (viewportSize.height / scale) * mapScale };
+  const vRect = { 
+    x: (-canvasPos.x / scale - bounds.minX) * mapScale, 
+    y: (-canvasPos.y / scale - bounds.minY) * mapScale, 
+    w: (viewportSize.width / scale) * mapScale, 
+    h: (viewportSize.height / scale) * mapScale 
+  };
 
   return (
-    <div ref={containerRef} className="absolute bottom-6 right-6 bg-white/80 backdrop-blur-md border border-black/5 rounded-lg shadow-xl overflow-hidden cursor-crosshair z-20 pointer-events-auto" style={{ width: mapSize, height: mapSize }} onPointerDown={handleMapClick}>
+    <div ref={containerRef} className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-md border border-black/10 rounded-lg shadow-2xl overflow-hidden cursor-crosshair z-20 pointer-events-auto ring-1 ring-black/5" style={{ width: mapSize, height: mapSize }} onPointerDown={handleMapClick}>
       <div className="relative w-full h-full pointer-events-none">
         {memos.map(m => {
           const c = toMapCoord(m.x, m.y);
           return <div key={m.id} className="absolute rounded-[1px]" style={{ left: c.x, top: c.y, width: m.width * mapScale, height: m.height * mapScale, backgroundColor: m.style.color, border: '0.5px solid rgba(0,0,0,0.1)' }} />;
         })}
-        <div className="absolute border border-blue-500 bg-blue-500/10 rounded-sm" style={{ left: vRect.x, top: vRect.y, width: vRect.w, height: vRect.h }} />
+        <div className="absolute border-2 border-blue-500 bg-blue-500/10 rounded-sm shadow-[0_0_0_1000px_rgba(0,0,0,0.02)]" style={{ left: vRect.x, top: vRect.y, width: vRect.w, height: vRect.h }} />
       </div>
     </div>
   );
@@ -303,65 +303,50 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
   const dragControls = useDragControls();
   const [localSize, setLocalSize] = useState({ width: memo.width, height: memo.height });
 
-  // Sync local size when memo updates from server (other users)
   useEffect(() => {
     setLocalSize({ width: memo.width, height: memo.height });
   }, [memo.width, memo.height]);
-
-  const adjustFontSize = (delta: number) => {
-    onUpdate({ style: { ...memo.style, fontSize: Math.max(8, Math.min(72, memo.style.fontSize + delta)) } });
-  };
 
   return (
     <motion.div
       drag dragControls={dragControls} dragListener={false} dragMomentum={false}
       onDragEnd={(e, info) => onUpdate({ x: memo.x + info.offset.x / scale, y: memo.y + info.offset.y / scale })}
       animate={{ x: memo.x, y: memo.y, zIndex: memo.zIndex || 0 }}
-      className="absolute group shadow-2xl overflow-visible cursor-default"
+      className="absolute group shadow-xl hover:shadow-2xl transition-shadow duration-200 overflow-visible cursor-default"
       style={{ width: localSize.width, height: localSize.height }}
     >
-      <div className="w-full h-full flex flex-col rounded-sm overflow-hidden" style={{ backgroundColor: memo.style.color, color: '#333' }}>
-        <div className="h-6 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0" onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}>
-          <div className="flex space-x-1" onPointerDown={(e) => e.stopPropagation()}>
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, isBold: !memo.style.isBold } }); }} className={cn("p-0.5 rounded hover:bg-black/10", memo.style.isBold && "bg-black/10")}><Bold size={10} /></button>
-            <div className="flex items-center bg-black/5 rounded px-0.5">
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.max(8, memo.style.fontSize - 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronDown size={10} /></button>
-              <span className="text-[8px] font-bold px-0.5 min-w-[12px] text-center">{memo.style.fontSize}</span>
-              <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.min(72, memo.style.fontSize + 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronUp size={10} /></button>
+      <div className="w-full h-full flex flex-col rounded-md overflow-hidden ring-1 ring-black/5" style={{ backgroundColor: memo.style.color, color: '#333' }}>
+        <div className="h-7 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0" onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}>
+          <div className="flex items-center space-x-1" onPointerDown={(e) => e.stopPropagation()}>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, isBold: !memo.style.isBold } }); }} className={cn("p-1 rounded hover:bg-black/10 transition-colors", memo.style.isBold && "bg-black/10")}><Bold size={12} /></button>
+            <div className="flex items-center bg-black/5 rounded-md px-1">
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.max(8, memo.style.fontSize - 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronDown size={12} /></button>
+              <span className="text-[10px] font-bold px-1 min-w-[16px] text-center">{memo.style.fontSize}</span>
+              <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.min(72, memo.style.fontSize + 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronUp size={12} /></button>
             </div>
           </div>
-          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded hover:bg-black/10 text-red-600"><Trash2 size={10} /></button>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 rounded hover:bg-black/10 text-red-600 transition-colors"><Trash2 size={12} /></button>
         </div>
-        <textarea ref={textRef} value={memo.text} onPointerDown={(e) => e.stopPropagation()} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Type something..." className="flex-1 w-full p-3 bg-transparent outline-none resize-none overflow-auto scrollbar-none" style={{ fontSize: `${memo.style.fontSize}px`, fontWeight: memo.style.isBold ? 'bold' : 'normal' }} />
+        <textarea ref={textRef} value={memo.text} onPointerDown={(e) => e.stopPropagation()} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Type something..." className="flex-1 w-full p-3 bg-transparent outline-none resize-none overflow-auto scrollbar-none" style={{ fontSize: `${memo.style.fontSize}px`, fontWeight: memo.style.isBold ? 'bold' : 'normal', lineHeight: 1.4 }} />
         <div 
           className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
           onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startW = localSize.width;
-            const startH = localSize.height;
-            
-            let currentW = startW;
-            let currentH = startH;
-
+            e.preventDefault(); e.stopPropagation();
+            const startX = e.clientX; const startY = e.clientY;
+            const startW = localSize.width; const startH = localSize.height;
+            let currentW = startW; let currentH = startH;
             const onMove = (pe: PointerEvent) => {
               currentW = Math.max(100, startW + (pe.clientX - startX) / scale);
               currentH = Math.max(80, startH + (pe.clientY - startY) / scale);
               setLocalSize({ width: currentW, height: currentH });
             };
-
             const onUp = () => {
-              window.removeEventListener('pointermove', onMove);
-              window.removeEventListener('pointerup', onUp);
+              window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
               onUpdate({ width: currentW, height: currentH });
             };
-
-            window.addEventListener('pointermove', onMove);
-            window.addEventListener('pointerup', onUp);
+            window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
           }}
-        ><div className="w-2 h-2 border-r-2 border-b-2 border-black/20" /></div>
+        ><div className="w-2.5 h-2.5 border-r-2 border-b-2 border-black/20 rounded-br-sm" /></div>
       </div>
     </motion.div>
   );
