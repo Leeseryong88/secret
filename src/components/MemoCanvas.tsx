@@ -70,16 +70,24 @@ export default function MemoCanvas({
   const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 1000, height: 1000 });
-  const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   
+  const canvasPosRef = useRef(canvasPos);
+  const scaleRef = useRef(scale);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasDragControls = useDragControls();
+  const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   const t = translations[lang];
 
   const memoColors = [
     '#fef3c7', '#dcfce7', '#dbeafe', '#fce7f3', '#f3f4f6', '#ede9fe',
   ];
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    canvasPosRef.current = canvasPos;
+    scaleRef.current = scale;
+  }, [canvasPos, scale]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -95,6 +103,7 @@ export default function MemoCanvas({
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // Use refs in wheel listener to avoid stale closure
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -103,7 +112,27 @@ export default function MemoCanvas({
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const zoomSpeed = 0.001;
-        setScale(s => Math.min(Math.max(0.1, s - e.deltaY * zoomSpeed), 5));
+        const delta = -e.deltaY * zoomSpeed;
+        
+        const currentScale = scaleRef.current;
+        const currentPos = canvasPosRef.current;
+        const newScale = Math.min(Math.max(0.1, currentScale + delta), 5);
+        
+        if (newScale === currentScale) return;
+
+        // Zoom toward mouse cursor
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const gridX = (mouseX - currentPos.x) / currentScale;
+        const gridY = (mouseY - currentPos.y) / currentScale;
+
+        const newPosX = mouseX - gridX * newScale;
+        const newPosY = mouseY - gridY * newScale;
+
+        setScale(newScale);
+        setCanvasPos({ x: newPosX, y: newPosY });
       }
     };
 
@@ -128,12 +157,7 @@ export default function MemoCanvas({
 
   const handleCanvasPointerUp = (e: React.PointerEvent) => {
     if (!dragStartPos.current) return;
-
-    const distance = Math.sqrt(
-      Math.pow(e.clientX - dragStartPos.current.x, 2) +
-      Math.pow(e.clientY - dragStartPos.current.y, 2)
-    );
-
+    const distance = Math.sqrt(Math.pow(e.clientX - dragStartPos.current.x, 2) + Math.pow(e.clientY - dragStartPos.current.y, 2));
     if (distance < 5) {
       if (e.target === containerRef.current || e.target === canvasRef.current || (e.target as HTMLElement).id === 'grid-bg') {
         const rect = containerRef.current!.getBoundingClientRect();
@@ -166,7 +190,6 @@ export default function MemoCanvas({
     const x = (showColorPicker.x - canvasPos.x) / scale;
     const y = (showColorPicker.y - canvasPos.y) / scale;
     const maxZ = memos.length > 0 ? Math.max(...memos.map(m => m.zIndex || 0)) : 0;
-
     onAddMemo({
       text: '', x: x - 100, y: y - 75, width: 200, height: 150, zIndex: maxZ + 1,
       style: { fontSize: 14, isBold: false, color }
@@ -275,7 +298,12 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
     const rect = containerRef.current.getBoundingClientRect();
     const targetCenterX = (e.clientX - rect.left) / mapScale + bounds.minX;
     const targetCenterY = (e.clientY - rect.top) / mapScale + bounds.minY;
-    onJump({ x: -(targetCenterX - (viewportSize.width / scale) / 2) * scale, y: -(targetCenterY - (viewportSize.height / scale) / 2) * scale });
+    
+    // Calculate new position so that target center is in viewport center
+    const newCanvasX = -(targetCenterX - (viewportSize.width / scale) / 2) * scale;
+    const newCanvasY = -(targetCenterY - (viewportSize.height / scale) / 2) * scale;
+    
+    onJump({ x: newCanvasX, y: newCanvasY });
   };
 
   const vRect = { 
