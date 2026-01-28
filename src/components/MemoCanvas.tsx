@@ -135,9 +135,8 @@ export default function MemoCanvas({
         canvasY.set(mouseY - gridY * newScale);
         canvasScale.set(newScale);
       } else {
-        // Normal scroll panned
-        canvasX.set(canvasX.get() - e.deltaX);
-        canvasY.set(canvasY.get() - e.deltaY);
+        // Disable normal scroll panning as requested
+        // e.preventDefault(); // Uncomment if you want to block browser default scroll entirely
       }
     };
 
