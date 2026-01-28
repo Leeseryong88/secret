@@ -303,7 +303,8 @@ export default function MemoCanvas({
           memos={memos} 
           canvasPos={canvasPos} 
           scale={scale} 
-          viewportSize={viewportSize} 
+          viewportSize={viewportSize}
+          onJump={(newPos) => setCanvasPos(newPos)}
         />
       </div>
 
@@ -314,8 +315,21 @@ export default function MemoCanvas({
   );
 }
 
-function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], canvasPos: { x: number, y: number }, scale: number, viewportSize: { width: number, height: number } }) {
+function Minimap({ 
+  memos, 
+  canvasPos, 
+  scale, 
+  viewportSize,
+  onJump 
+}: { 
+  memos: Memo[], 
+  canvasPos: { x: number, y: number }, 
+  scale: number, 
+  viewportSize: { width: number, height: number },
+  onJump: (pos: { x: number, y: number }) => void
+}) {
   const mapSize = 150;
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const bounds = useMemo(() => {
     if (memos.length === 0) return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };
@@ -344,6 +358,29 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
   
   const mapScale = mapSize / maxRange;
 
+  const handleMapClick = (e: React.PointerEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // Convert map coordinates back to canvas coordinates
+    const targetCenterX = mx / mapScale + bounds.minX;
+    const targetCenterY = my / mapScale + bounds.minY;
+
+    // Center the viewport on this target
+    const viewW = viewportSize.width / scale;
+    const viewH = viewportSize.height / scale;
+
+    const targetViewX = targetCenterX - viewW / 2;
+    const targetViewY = targetCenterY - viewH / 2;
+
+    onJump({
+      x: -targetViewX * scale,
+      y: -targetViewY * scale
+    });
+  };
+
   const toMapCoord = (x: number, y: number) => ({
     x: (x - bounds.minX) * mapScale,
     y: (y - bounds.minY) * mapScale
@@ -358,10 +395,12 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
 
   return (
     <div 
-      className="absolute bottom-6 right-6 bg-white/80 backdrop-blur-md border border-black/5 rounded-lg shadow-xl overflow-hidden pointer-events-none z-20"
+      ref={containerRef}
+      className="absolute bottom-6 right-6 bg-white/80 backdrop-blur-md border border-black/5 rounded-lg shadow-xl overflow-hidden cursor-crosshair z-20 pointer-events-auto"
       style={{ width: mapSize, height: mapSize }}
+      onPointerDown={handleMapClick}
     >
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full pointer-events-none">
         {memos.map(memo => {
           const coord = toMapCoord(memo.x, memo.y);
           return (
