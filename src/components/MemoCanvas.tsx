@@ -68,6 +68,7 @@ export default function MemoCanvas({
   const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -121,17 +122,33 @@ export default function MemoCanvas({
     return () => clearInterval(timer);
   }, [room.expiresAt]);
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target !== containerRef.current && e.target !== canvasRef.current) {
-      setShowColorPicker(null);
-      return;
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleCanvasPointerUp = (e: React.PointerEvent) => {
+    if (!dragStartPos.current) return;
+
+    const distance = Math.sqrt(
+      Math.pow(e.clientX - dragStartPos.current.x, 2) +
+      Math.pow(e.clientY - dragStartPos.current.y, 2)
+    );
+
+    // Only show color picker if it's a click, not a drag (distance < 5px)
+    if (distance < 5) {
+      if (e.target !== containerRef.current && e.target !== canvasRef.current) {
+        setShowColorPicker(null);
+        return;
+      }
+      
+      const rect = containerRef.current!.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      setShowColorPicker({ x, y });
     }
     
-    const rect = containerRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setShowColorPicker({ x, y });
+    dragStartPos.current = null;
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -219,7 +236,8 @@ export default function MemoCanvas({
       <div 
         ref={containerRef}
         className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
-        onClick={handleCanvasClick}
+        onPointerDown={handleCanvasPointerDown}
+        onPointerUp={handleCanvasPointerUp}
         onWheel={handleWheel}
       >
         <motion.div
