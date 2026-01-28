@@ -14,7 +14,8 @@ import {
   Bold,
   ChevronUp,
   ChevronDown,
-  Edit2
+  Edit2,
+  Users
 } from 'lucide-react';
 import { cn, formatTimeLeft } from '@/lib/utils';
 import { Language, translations } from '@/lib/translations';
