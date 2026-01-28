@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, Lock, Hash } from 'lucide-react';
+import { ArrowLeft, Clock, Lock, Hash, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Language, translations } from '@/lib/translations';
 
 interface CreateRoomFormProps {
   lang: Language;
   onBack: () => void;
-  onCreate: (data: { name: string; expiresHours: number; password: string }) => void;
+  onCreate: (data: { name: string; expiresHours: number; password: string; type: 'chat' | 'memo' }) => void;
 }
 
 export default function CreateRoomForm({ lang, onBack, onCreate }: CreateRoomFormProps) {
