@@ -151,6 +151,13 @@ export default function MemoCanvas({
     dragStartPos.current = null;
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (showColorPicker) {
+      e.preventDefault();
+      setShowColorPicker(null);
+    }
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     if (!e.ctrlKey && !e.metaKey) {
       setCanvasPos(prev => ({
@@ -238,6 +245,7 @@ export default function MemoCanvas({
         className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
         onPointerDown={handleCanvasPointerDown}
         onPointerUp={handleCanvasPointerUp}
+        onContextMenu={handleContextMenu}
         onWheel={handleWheel}
       >
         <motion.div
