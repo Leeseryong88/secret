@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { 
   Clock, 
   LogOut, 
@@ -184,9 +184,9 @@ export default function MemoCanvas({
             <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
               <button onClick={copyRoomId} className="flex items-center hover:text-black transition-colors mr-3">
                 {room.id}
-                {copied ? <Check size={10} className="ml-1 text-emerald-600" /> : <Copy size={10} className="ml-1" />}
+                {copied ? <Check size={10} className="ml-1 text-emerald-500" /> : <Copy size={10} className="ml-1" />}
               </button>
-              <div className="flex items-center text-orange-600 font-medium">
+              <div className="flex items-center text-orange-400">
                 <Clock size={10} className="mr-1" />
                 {formatTimeLeft(timeLeft)}
               </div>
@@ -307,7 +307,6 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
     let maxX = Math.max(...memos.map(m => m.x + m.width)) + 500;
     let maxY = Math.max(...memos.map(m => m.y + m.height)) + 500;
     
-    // Include current viewport in bounds
     const viewX = -canvasPos.x / scale;
     const viewY = -canvasPos.y / scale;
     const viewW = viewportSize.width / scale;
@@ -345,7 +344,6 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
       style={{ width: mapSize, height: mapSize }}
     >
       <div className="relative w-full h-full">
-        {/* All Memos */}
         {memos.map(memo => {
           const coord = toMapCoord(memo.x, memo.y);
           return (
@@ -363,7 +361,6 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
             />
           );
         })}
-        {/* Current Viewport */}
         <div 
           className="absolute border border-blue-500 bg-blue-500/10 rounded-sm"
           style={{
@@ -380,6 +377,7 @@ function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], can
 
 function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: number; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const dragControls = useDragControls();
 
   const adjustFontSize = (delta: number) => {
     onUpdate({ style: { ...memo.style, fontSize: Math.max(8, Math.min(72, memo.style.fontSize + delta)) } });
@@ -388,6 +386,8 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
   return (
     <motion.div
       drag
+      dragControls={dragControls}
+      dragListener={false}
       dragMomentum={false}
       onDragEnd={(e, info) => {
         onUpdate({ 
@@ -404,9 +404,11 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
         className="w-full h-full flex flex-col rounded-sm overflow-hidden"
         style={{ backgroundColor: memo.style.color, color: '#333' }}
       >
-        {/* Memo Header */}
-        <div className="h-6 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5">
-          <div className="flex space-x-1">
+        <div 
+          className="h-6 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <div className="flex space-x-1" onPointerDown={(e) => e.stopPropagation()}>
             <button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -433,6 +435,7 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
             </div>
           </div>
           <button 
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
@@ -443,7 +446,6 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
           </button>
         </div>
 
-        {/* Memo Content */}
         <textarea
           ref={textRef}
           value={memo.text}
@@ -456,7 +458,6 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
           }}
         />
 
-        {/* Resize Handle */}
         <div 
           className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
           onMouseDown={(e) => {
