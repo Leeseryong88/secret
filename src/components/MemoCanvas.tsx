@@ -288,7 +288,7 @@ export default function MemoCanvas({
             style={{ backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', backgroundSize: '40px 40px', width: '100000px', height: '100000px', transform: 'translate(-50000px, -50000px)' }} 
           />
           {memos.map((memo) => (
-            <StickyNote key={memo.id} memo={memo} canvasScale={canvasScale} onUpdate={(updates) => onUpdateMemo(memo.id, updates)} onDelete={() => onDeleteMemo(memo.id)} />
+            <StickyNote key={memo.id} memo={memo} canvasScale={canvasScale} onUpdate={(updates: Partial<Memo>) => onUpdateMemo(memo.id, updates)} onDelete={() => onDeleteMemo(memo.id)} />
           ))}
         </motion.div>
 
@@ -316,7 +316,16 @@ export default function MemoCanvas({
   );
 }
 
-function Minimap({ memos, canvasX, canvasY, canvasScale, syncState, viewportSize }: any) {
+interface MinimapProps {
+  memos: Memo[];
+  canvasX: any;
+  canvasY: any;
+  canvasScale: any;
+  syncState: { x: number; y: number; scale: number };
+  viewportSize: { width: number; height: number };
+}
+
+function Minimap({ memos, canvasX, canvasY, canvasScale, syncState, viewportSize }: MinimapProps) {
   const mapSize = 150;
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -375,7 +384,14 @@ function Minimap({ memos, canvasX, canvasY, canvasScale, syncState, viewportSize
   );
 }
 
-function StickyNote({ memo, canvasScale, onUpdate, onDelete }: any) {
+interface StickyNoteProps {
+  memo: Memo;
+  canvasScale: any;
+  onUpdate: (updates: Partial<Memo>) => void;
+  onDelete: () => void;
+}
+
+function StickyNote({ memo, canvasScale, onUpdate, onDelete }: StickyNoteProps) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const dragControls = useDragControls();
   const [localSize, setLocalSize] = useState({ width: memo.width, height: memo.height });
