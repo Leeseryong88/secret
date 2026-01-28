@@ -275,6 +275,7 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
   const toMapCoord = (x: number, y: number) => ({ x: (x - bounds.minX) * mapScale, y: (y - bounds.minY) * mapScale });
 
   const handleMapClick = (e: React.PointerEvent) => {
+    e.stopPropagation(); // CRITICAL: Prevent canvas drag
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const targetCenterX = (e.clientX - rect.left) / mapScale + bounds.minX;

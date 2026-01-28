@@ -16,12 +16,13 @@ export default function CreateRoomForm({ lang, onBack, onCreate }: CreateRoomFor
   const [name, setName] = useState('');
   const [expiresHours, setExpiresHours] = useState(2);
   const [password, setPassword] = useState('');
+  const [roomType, setRoomType] = useState<'chat' | 'memo'>('chat');
   const t = translations[lang];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || !name) return;
-    onCreate({ name, expiresHours, password });
+    onCreate({ name, expiresHours, password, type: roomType });
   };
 
   return (
@@ -33,17 +34,46 @@ export default function CreateRoomForm({ lang, onBack, onCreate }: CreateRoomFor
     >
       <button
         onClick={onBack}
-        className="flex items-center text-gray-400 hover:text-white mb-8 transition-colors"
+        className="flex items-center text-gray-400 hover:text-black mb-8 transition-colors font-medium"
       >
         <ArrowLeft size={20} className="mr-2" />
         {t.back}
       </button>
 
-      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">{t.create}</h2>
+      <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-black">{t.create}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-400 mb-2 flex items-center">
+          <label className="block text-xs md:text-sm font-bold text-gray-500 mb-2 flex items-center">
+            <Plus size={14} className="mr-2" />
+            {t.roomType}
+          </label>
+          <div className="flex bg-black/5 p-1 rounded-xl border border-black/5">
+            <button
+              type="button"
+              onClick={() => setRoomType('chat')}
+              className={cn(
+                "flex-1 py-2 rounded-lg text-sm font-bold transition-all",
+                roomType === 'chat' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              {t.chatRoom}
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoomType('memo')}
+              className={cn(
+                "flex-1 py-2 rounded-lg text-sm font-bold transition-all",
+                roomType === 'memo' ? "bg-white text-emerald-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              {t.memoRoom}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs md:text-sm font-bold text-gray-500 mb-2 flex items-center">
             <Hash size={14} className="mr-2" />
             {t.roomName}
           </label>
@@ -53,7 +83,7 @@ export default function CreateRoomForm({ lang, onBack, onCreate }: CreateRoomFor
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t.roomNamePlaceholder}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm md:text-base"
+            className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm md:text-base text-black"
           />
         </div>
 

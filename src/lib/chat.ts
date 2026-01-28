@@ -25,17 +25,15 @@ async function hashPassword(password: string, salt: string) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function createRoom(name: string, expiresHours: number, password: string) {
+export async function createRoom(name: string, expiresHours: number, password: string, type: 'chat' | 'memo' = 'chat') {
   await signInAnonymously(auth);
   const user = auth.currentUser;
   if (!user) throw new Error('Auth failed');
 
   if (!name.trim()) throw new Error('방 이름을 입력해주세요.');
 
-  // Use name as roomId (clean it to be URL/ID safe if necessary, but Firestore IDs can be strings)
   const roomId = name.trim();
   
-  // Check if room already exists and is active
   const roomDoc = await getDoc(doc(db, 'rooms', roomId));
   if (roomDoc.exists()) {
     const data = roomDoc.data();
@@ -53,6 +51,7 @@ export async function createRoom(name: string, expiresHours: number, password: s
   const roomData = {
     id: roomId,
     name: roomId,
+    type,
     createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromMillis(expiresAt),
     passwordHash,
@@ -63,7 +62,7 @@ export async function createRoom(name: string, expiresHours: number, password: s
   };
 
   await setDoc(doc(db, 'rooms', roomId), roomData);
-  return { roomId, expiresAt };
+  return { roomId, expiresAt, type };
 }
 
 export async function joinRoom(roomId: string, password: string) {
@@ -88,8 +87,37 @@ export async function joinRoom(roomId: string, password: string) {
   return {
     id: roomId,
     name: data.name,
+    type: data.type || 'chat',
     expiresAt: data.expiresAt.toMillis(),
   };
+}
+
+export function subscribeMessages(roomId: string, callback: (messages: any[]) => void) {
+  const q = query(
+    collection(db, 'rooms', roomId, 'messages'),
+    orderBy('createdAt', 'asc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now(),
+    }));
+    callback(messages);
+  });
+}
+
+export async function sendMessage(roomId: string, text: string, nickname: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  await addDoc(collection(db, 'rooms', roomId, 'messages'), {
+    text,
+    senderId: user.uid,
+    nickname,
+    createdAt: serverTimestamp(),
+  });
 }
 
 export function subscribeMemos(roomId: string, callback: (memos: any[]) => void) {

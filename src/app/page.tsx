@@ -63,11 +63,11 @@ export default function Home() {
     }
   }, [view, room?.id]);
 
-  const handleCreateRoom = async (data: { name: string; expiresHours: number; password: string }) => {
+  const handleCreateRoom = async (data: { name: string; expiresHours: number; password: string; type: 'chat' | 'memo' }) => {
     setLoading(true);
     try {
-      const { roomId, expiresAt } = await chatApi.createRoom(data.name, data.expiresHours, data.password);
-      setRoom({ id: roomId, name: data.name || roomId, expiresAt });
+      const { roomId, expiresAt, type } = await chatApi.createRoom(data.name, data.expiresHours, data.password, data.type);
+      setRoom({ id: roomId, name: data.name || roomId, expiresAt, type });
       setView('CHAT');
     } catch (err: any) {
       console.error(err);
@@ -103,6 +103,8 @@ export default function Home() {
   const handleUpdateMemo = async (id: string, updates: any) => {
     if (!room) return;
     try {
+      // Optimistically update local UI for smoother resize/drag
+      setMemos(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
       await chatApi.updateMemo(room.id, id, updates);
     } catch (err) {
       console.error(err);
@@ -188,17 +190,30 @@ export default function Home() {
               exit={{ opacity: 0, scale: 0.98 }}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <MemoCanvas
-                lang={lang}
-                room={room}
-                memos={memos}
-                currentUser={currentUser}
-                onAddMemo={handleAddMemo}
-                onUpdateMemo={handleUpdateMemo}
-                onDeleteMemo={handleDeleteMemo}
-                onExtend={handleExtend}
-                onLeave={handleLeave}
-              />
+              {room.type === 'memo' ? (
+                <MemoCanvas
+                  lang={lang}
+                  room={room}
+                  memos={memos}
+                  currentUser={currentUser}
+                  onAddMemo={handleAddMemo}
+                  onUpdateMemo={handleUpdateMemo}
+                  onDeleteMemo={handleDeleteMemo}
+                  onExtend={handleExtend}
+                  onLeave={handleLeave}
+                />
+              ) : (
+                <ChatInterface
+                  lang={lang}
+                  room={room}
+                  messages={messages}
+                  currentUser={currentUser}
+                  onSendMessage={handleSendMessage}
+                  onUpdateNickname={handleUpdateNickname}
+                  onExtend={handleExtend}
+                  onLeave={handleLeave}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
