@@ -243,18 +243,6 @@ export default function Home() {
         </AnimatePresence>
       </div>
 
-      {view !== 'CHAT' && (
-        <footer className="w-full py-6 text-gray-400 text-[10px] md:text-sm flex flex-col items-center space-y-1 bg-[#f8f9fa] border-t border-black/5">
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <span>{t.footer1}</span>
-            <span className="opacity-30">•</span>
-            <span>{t.footer2}</span>
-            <span className="opacity-30">•</span>
-            <span>{t.footer3}</span>
-          </div>
-          <p className="opacity-50">© 2026 Anonymous Secret Chat. All rights reserved.</p>
-        </footer>
-      )}
     </main>
   );
 }
