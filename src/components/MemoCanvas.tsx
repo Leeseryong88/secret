@@ -78,7 +78,8 @@ export default function MemoCanvas({
   const [syncState, setSyncState] = useState({ x: 0, y: 0, scale: 1 });
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasDragControls = useDragControls();
+  const isPanning = useRef(false);
+  const lastPointerPos = useRef({ x: 0, y: 0 });
   const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   const t = translations[lang];
 
@@ -155,12 +156,31 @@ export default function MemoCanvas({
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
     const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'grid-bg';
     if (isBg) {
+      isPanning.current = true;
+      lastPointerPos.current = { x: e.clientX, y: e.clientY };
       dragStartPos.current = { x: e.clientX, y: e.clientY };
-      canvasDragControls.start(e);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
   };
 
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (!isPanning.current) return;
+    
+    const deltaX = e.clientX - lastPointerPos.current.x;
+    const deltaY = e.clientY - lastPointerPos.current.y;
+    
+    canvasX.set(canvasX.get() + deltaX);
+    canvasY.set(canvasY.get() + deltaY);
+    
+    lastPointerPos.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handleCanvasPointerUp = (e: React.PointerEvent) => {
+    if (isPanning.current) {
+      isPanning.current = false;
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    }
+
     if (!dragStartPos.current) return;
     const distance = Math.sqrt(Math.pow(e.clientX - dragStartPos.current.x, 2) + Math.pow(e.clientY - dragStartPos.current.y, 2));
     if (distance < 5) {
@@ -215,15 +235,12 @@ export default function MemoCanvas({
         ref={containerRef}
         className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
         onPointerDown={handleCanvasPointerDown}
+        onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onPointerCancel={handleCanvasPointerUp}
         onContextMenu={(e) => { if (showColorPicker) { e.preventDefault(); setShowColorPicker(null); } }}
       >
         <motion.div
-          drag dragControls={canvasDragControls} dragListener={false} dragMomentum={false}
-          onDrag={(e, info) => {
-            canvasX.set(canvasX.get() + info.delta.x);
-            canvasY.set(canvasY.get() + info.delta.y);
-          }}
           className="absolute inset-0"
           style={{ x: canvasX, y: canvasY, scale: canvasScale, transformOrigin: '0 0' }}
         >
