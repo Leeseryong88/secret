@@ -154,12 +154,13 @@ export default function MemoCanvas({
   }, [room.expiresAt]);
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'grid-bg';
+    const target = e.target as HTMLElement;
+    const isBg = target === containerRef.current || target.id === 'canvas-main' || target.id === 'grid-bg';
     if (isBg) {
       isPanning.current = true;
       lastPointerPos.current = { x: e.clientX, y: e.clientY };
       dragStartPos.current = { x: e.clientX, y: e.clientY };
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      target.setPointerCapture(e.pointerId);
     }
   };
 
@@ -184,7 +185,8 @@ export default function MemoCanvas({
     if (!dragStartPos.current) return;
     const distance = Math.sqrt(Math.pow(e.clientX - dragStartPos.current.x, 2) + Math.pow(e.clientY - dragStartPos.current.y, 2));
     if (distance < 5) {
-      const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'grid-bg';
+      const target = e.target as HTMLElement;
+      const isBg = target === containerRef.current || target.id === 'canvas-main' || target.id === 'grid-bg';
       if (isBg) {
         const rect = containerRef.current!.getBoundingClientRect();
         setShowColorPicker({ x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -241,6 +243,7 @@ export default function MemoCanvas({
         onContextMenu={(e) => { if (showColorPicker) { e.preventDefault(); setShowColorPicker(null); } }}
       >
         <motion.div
+          id="canvas-main"
           className="absolute inset-0"
           style={{ x: canvasX, y: canvasY, scale: canvasScale, transformOrigin: '0 0' }}
         >
