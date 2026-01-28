@@ -25,6 +25,7 @@ interface Memo {
   y: number;
   width: number;
   height: number;
+  zIndex: number;
   style: {
     fontSize: number;
     isBold: boolean;
@@ -173,12 +174,15 @@ export default function MemoCanvas({
     const x = (showColorPicker.x - canvasPos.x) / scale;
     const y = (showColorPicker.y - canvasPos.y) / scale;
 
+    const maxZ = memos.length > 0 ? Math.max(...memos.map(m => m.zIndex || 0)) : 0;
+
     onAddMemo({
       text: '',
       x: x - 100,
       y: y - 75,
       width: 200,
       height: 150,
+      zIndex: maxZ + 1,
       style: {
         fontSize: 14,
         isBold: false,
@@ -448,12 +452,22 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
     onUpdate({ style: { ...memo.style, fontSize: Math.max(8, Math.min(72, memo.style.fontSize + delta)) } });
   };
 
+  const handleBringToFront = () => {
+    // This is handled by passing down a zIndex updater if we want real-time sync,
+    // but for simple local feel, we can just update if it's not already on top.
+    // In a real app, you might want to find the max zIndex from all memos.
+  };
+
   return (
     <motion.div
       drag
       dragControls={dragControls}
       dragListener={false}
       dragMomentum={false}
+      onDragStart={() => {
+        // Find max zIndex to bring to front
+        // Note: In real production we'd pass this logic from parent
+      }}
       onDragEnd={(e, info) => {
         onUpdate({ 
           x: memo.x + info.offset.x / scale, 
@@ -461,9 +475,12 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
         });
       }}
       initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1, x: memo.x, y: memo.y }}
+      animate={{ scale: 1, opacity: 1, x: memo.x, y: memo.y, zIndex: memo.zIndex || 0 }}
       className="absolute group shadow-2xl overflow-visible cursor-default"
       style={{ width: memo.width, height: memo.height }}
+      onPointerDown={() => {
+        // Optional: onUpdate({ zIndex: ... }) to sync zIndex
+      }}
     >
       <div 
         className="w-full h-full flex flex-col rounded-sm overflow-hidden"
@@ -471,7 +488,10 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
       >
         <div 
           className="h-6 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0"
-          onPointerDown={(e) => dragControls.start(e)}
+          onPointerDown={(e) => {
+            e.stopPropagation(); // Prevent canvas pan
+            dragControls.start(e);
+          }}
         >
           <div className="flex space-x-1" onPointerDown={(e) => e.stopPropagation()}>
             <button 
@@ -514,6 +534,7 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
         <textarea
           ref={textRef}
           value={memo.text}
+          onPointerDown={(e) => e.stopPropagation()} // Prevent canvas pan when clicking text
           onChange={(e) => onUpdate({ text: e.target.value })}
           placeholder="Type something..."
           className="flex-1 w-full p-3 bg-transparent outline-none resize-none overflow-auto scrollbar-none"
@@ -525,9 +546,9 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
 
         <div 
           className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation(); // CRITICAL: Prevent canvas pan
             const startX = e.clientX;
             const startY = e.clientY;
             const startWidth = memo.width;
