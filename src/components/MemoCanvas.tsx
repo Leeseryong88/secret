@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -11,10 +11,9 @@ import {
   Plus, 
   Type, 
   Trash2, 
-  Maximize2,
-  Minimize2,
   Bold,
-  Palette
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { cn, formatTimeLeft } from '@/lib/utils';
 import { Language, translations } from '@/lib/translations';
@@ -68,6 +67,8 @@ export default function MemoCanvas({
   const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
@@ -82,6 +83,37 @@ export default function MemoCanvas({
   ];
 
   useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setViewportSize({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        });
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  // Prevent browser zoom on Ctrl + Wheel
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheelRaw = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomSpeed = 0.001;
+        setScale(s => Math.min(Math.max(0.1, s - e.deltaY * zoomSpeed), 5));
+      }
+    };
+
+    container.addEventListener('wheel', handleWheelRaw, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheelRaw);
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       const remaining = Math.max(0, Math.floor((room.expiresAt - Date.now()) / 1000));
       setTimeLeft(remaining);
@@ -90,7 +122,6 @@ export default function MemoCanvas({
   }, [room.expiresAt]);
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    // Check if clicking the container or the canvas div (not a memo)
     if (e.target !== containerRef.current && e.target !== canvasRef.current) {
       setShowColorPicker(null);
       return;
@@ -104,11 +135,7 @@ export default function MemoCanvas({
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      const zoomSpeed = 0.001;
-      const newScale = Math.min(Math.max(0.1, scale - e.deltaY * zoomSpeed), 5);
-      setScale(newScale);
-    } else {
+    if (!e.ctrlKey && !e.metaKey) {
       setCanvasPos(prev => ({
         x: prev.x - e.deltaX,
         y: prev.y - e.deltaY
@@ -119,7 +146,6 @@ export default function MemoCanvas({
   const createMemo = (color: string) => {
     if (!showColorPicker) return;
 
-    // Adjust coordinates based on current pan and scale
     const x = (showColorPicker.x - canvasPos.x) / scale;
     const y = (showColorPicker.y - canvasPos.y) / scale;
 
@@ -253,6 +279,14 @@ export default function MemoCanvas({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Minimap */}
+        <Minimap 
+          memos={memos} 
+          canvasPos={canvasPos} 
+          scale={scale} 
+          viewportSize={viewportSize} 
+        />
       </div>
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm text-center">
@@ -262,16 +296,100 @@ export default function MemoCanvas({
   );
 }
 
+function Minimap({ memos, canvasPos, scale, viewportSize }: { memos: Memo[], canvasPos: { x: number, y: number }, scale: number, viewportSize: { width: number, height: number } }) {
+  const mapSize = 150;
+  
+  const bounds = useMemo(() => {
+    if (memos.length === 0) return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };
+    
+    let minX = Math.min(...memos.map(m => m.x)) - 500;
+    let minY = Math.min(...memos.map(m => m.y)) - 500;
+    let maxX = Math.max(...memos.map(m => m.x + m.width)) + 500;
+    let maxY = Math.max(...memos.map(m => m.y + m.height)) + 500;
+    
+    // Include current viewport in bounds
+    const viewX = -canvasPos.x / scale;
+    const viewY = -canvasPos.y / scale;
+    const viewW = viewportSize.width / scale;
+    const viewH = viewportSize.height / scale;
+    
+    minX = Math.min(minX, viewX);
+    minY = Math.min(minY, viewY);
+    maxX = Math.max(maxX, viewX + viewW);
+    maxY = Math.max(maxY, viewY + viewH);
+    
+    return { minX, minY, maxX, maxY };
+  }, [memos, canvasPos, scale, viewportSize]);
+
+  const rangeX = bounds.maxX - bounds.minX;
+  const rangeY = bounds.maxY - bounds.minY;
+  const maxRange = Math.max(rangeX, rangeY);
+  
+  const mapScale = mapSize / maxRange;
+
+  const toMapCoord = (x: number, y: number) => ({
+    x: (x - bounds.minX) * mapScale,
+    y: (y - bounds.minY) * mapScale
+  });
+
+  const viewportRect = {
+    x: (-canvasPos.x / scale - bounds.minX) * mapScale,
+    y: (-canvasPos.y / scale - bounds.minY) * mapScale,
+    w: (viewportSize.width / scale) * mapScale,
+    h: (viewportSize.height / scale) * mapScale
+  };
+
+  return (
+    <div 
+      className="absolute bottom-6 right-6 bg-white/80 backdrop-blur-md border border-black/5 rounded-lg shadow-xl overflow-hidden pointer-events-none z-20"
+      style={{ width: mapSize, height: mapSize }}
+    >
+      <div className="relative w-full h-full">
+        {/* All Memos */}
+        {memos.map(memo => {
+          const coord = toMapCoord(memo.x, memo.y);
+          return (
+            <div 
+              key={memo.id}
+              className="absolute rounded-[1px]"
+              style={{
+                left: coord.x,
+                top: coord.y,
+                width: memo.width * mapScale,
+                height: memo.height * mapScale,
+                backgroundColor: memo.style.color,
+                border: '0.5px solid rgba(0,0,0,0.1)'
+              }}
+            />
+          );
+        })}
+        {/* Current Viewport */}
+        <div 
+          className="absolute border border-blue-500 bg-blue-500/10 rounded-sm"
+          style={{
+            left: viewportRect.x,
+            top: viewportRect.y,
+            width: viewportRect.w,
+            height: viewportRect.h
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: number; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
-  const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustFontSize = (delta: number) => {
+    onUpdate({ style: { ...memo.style, fontSize: Math.max(8, Math.min(72, memo.style.fontSize + delta)) } });
+  };
 
   return (
     <motion.div
       drag
       dragMomentum={false}
       onDragEnd={(e, info) => {
-        // Correct position based on drag info and current scale
         onUpdate({ 
           x: memo.x + info.offset.x / scale, 
           y: memo.y + info.offset.y / scale 
@@ -298,16 +416,21 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
             >
               <Bold size={10} />
             </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                const newSize = memo.style.fontSize === 24 ? 12 : memo.style.fontSize + 4;
-                onUpdate({ style: { ...memo.style, fontSize: newSize } });
-              }}
-              className="p-0.5 rounded hover:bg-black/10 transition-colors"
-            >
-              <Type size={10} />
-            </button>
+            <div className="flex items-center bg-black/5 rounded px-0.5">
+              <button 
+                onClick={(e) => { e.stopPropagation(); adjustFontSize(-2); }}
+                className="p-0.5 hover:bg-black/10 rounded transition-colors"
+              >
+                <ChevronDown size={10} />
+              </button>
+              <span className="text-[8px] font-bold px-0.5 min-w-[12px] text-center">{memo.style.fontSize}</span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); adjustFontSize(2); }}
+                className="p-0.5 hover:bg-black/10 rounded transition-colors"
+              >
+                <ChevronUp size={10} />
+              </button>
+            </div>
           </div>
           <button 
             onClick={(e) => {
