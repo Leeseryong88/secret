@@ -192,8 +192,8 @@ export default function MemoCanvas({
   return (
     <div className="flex flex-col h-full w-full bg-[#f8f9fa] overflow-hidden relative">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-30">
-        <div className="flex items-center space-x-3">
+      <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-30 pointer-events-none">
+        <div className="flex items-center space-x-3 pointer-events-auto">
           <div className="min-w-0">
             <h3 className="font-bold text-sm md:text-lg leading-tight truncate text-black">
               {room.name || room.id}
@@ -201,9 +201,9 @@ export default function MemoCanvas({
             <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
               <button onClick={copyRoomId} className="flex items-center hover:text-black transition-colors mr-3">
                 {room.id}
-                {copied ? <Check size={10} className="ml-1 text-emerald-500" /> : <Copy size={10} className="ml-1" />}
+                {copied ? <Check size={10} className="ml-1 text-emerald-600" /> : <Copy size={10} className="ml-1" />}
               </button>
-              <div className="flex items-center text-orange-400">
+              <div className="flex items-center text-orange-600 font-medium">
                 <Clock size={10} className="mr-1" />
                 {formatTimeLeft(timeLeft)}
               </div>
@@ -211,7 +211,7 @@ export default function MemoCanvas({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 pointer-events-auto">
           <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">
             {Math.round(scale * 100)}%
           </div>
