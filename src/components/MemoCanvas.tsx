@@ -300,6 +300,16 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
 function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: number; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const dragControls = useDragControls();
+  const [localSize, setLocalSize] = useState({ width: memo.width, height: memo.height });
+
+  // Sync local size when memo updates from server (other users)
+  useEffect(() => {
+    setLocalSize({ width: memo.width, height: memo.height });
+  }, [memo.width, memo.height]);
+
+  const adjustFontSize = (delta: number) => {
+    onUpdate({ style: { ...memo.style, fontSize: Math.max(8, Math.min(72, memo.style.fontSize + delta)) } });
+  };
 
   return (
     <motion.div
@@ -307,7 +317,7 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
       onDragEnd={(e, info) => onUpdate({ x: memo.x + info.offset.x / scale, y: memo.y + info.offset.y / scale })}
       animate={{ x: memo.x, y: memo.y, zIndex: memo.zIndex || 0 }}
       className="absolute group shadow-2xl overflow-visible cursor-default"
-      style={{ width: memo.width, height: memo.height }}
+      style={{ width: localSize.width, height: localSize.height }}
     >
       <div className="w-full h-full flex flex-col rounded-sm overflow-hidden" style={{ backgroundColor: memo.style.color, color: '#333' }}>
         <div className="h-6 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0" onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}>
@@ -326,15 +336,29 @@ function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: nu
           className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
           onPointerDown={(e) => {
             e.preventDefault();
-            e.stopPropagation(); // Prevent canvas pan
+            e.stopPropagation();
             const startX = e.clientX;
             const startY = e.clientY;
-            const startW = memo.width;
-            const startH = memo.height;
-            const onMove = (me: MouseEvent) => onUpdate({ width: Math.max(100, startW + (me.clientX - startX) / scale), height: Math.max(80, startH + (me.clientY - startY) / scale) });
-            const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onUp);
+            const startW = localSize.width;
+            const startH = localSize.height;
+            
+            let currentW = startW;
+            let currentH = startH;
+
+            const onMove = (pe: PointerEvent) => {
+              currentW = Math.max(100, startW + (pe.clientX - startX) / scale);
+              currentH = Math.max(80, startH + (pe.clientY - startY) / scale);
+              setLocalSize({ width: currentW, height: currentH });
+            };
+
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+              onUpdate({ width: currentW, height: currentH });
+            };
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
           }}
         ><div className="w-2 h-2 border-r-2 border-b-2 border-black/20" /></div>
       </div>
