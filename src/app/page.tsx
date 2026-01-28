@@ -6,6 +6,7 @@ import HomeView from '@/components/HomeView';
 import CreateRoomForm from '@/components/CreateRoomForm';
 import JoinRoomForm from '@/components/JoinRoomForm';
 import MemoCanvas from '@/components/MemoCanvas';
+import ChatInterface from '@/components/ChatInterface';
 import * as chatApi from '@/lib/chat';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -18,6 +19,7 @@ export default function Home() {
   const [lang, setLang] = useState<Language>('en'); // Default to English
   const [room, setRoom] = useState<any>(null);
   const [memos, setMemos] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     id: '',
@@ -53,15 +55,22 @@ export default function Home() {
     localStorage.setItem('chat-lang', newLang);
   };
 
-  // Subscribe to memos when in CHAT view
+  // Subscribe to data when in CHAT view
   useEffect(() => {
     if (view === 'CHAT' && room?.id) {
-      const unsubscribe = chatApi.subscribeMemos(room.id, (msgs) => {
-        setMemos(msgs);
-      });
-      return () => unsubscribe();
+      if (room.type === 'memo') {
+        const unsubscribe = chatApi.subscribeMemos(room.id, (data) => {
+          setMemos(data);
+        });
+        return () => unsubscribe();
+      } else {
+        const unsubscribe = chatApi.subscribeMessages(room.id, (data) => {
+          setMessages(data);
+        });
+        return () => unsubscribe();
+      }
     }
-  }, [view, room?.id]);
+  }, [view, room?.id, room?.type]);
 
   const handleCreateRoom = async (data: { name: string; expiresHours: number; password: string; type: 'chat' | 'memo' }) => {
     setLoading(true);
@@ -120,6 +129,20 @@ export default function Home() {
     }
   };
 
+  const handleSendMessage = async (text: string) => {
+    if (!room) return;
+    try {
+      await chatApi.sendMessage(room.id, text, currentUser.nickname);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateNickname = (newNickname: string) => {
+    setCurrentUser(prev => ({ ...prev, nickname: newNickname }));
+    localStorage.setItem('chat-nickname', newNickname);
+  };
+
   const handleExtend = async () => {
     if (!room) return;
     try {
@@ -138,11 +161,12 @@ export default function Home() {
       setView('HOME');
       setRoom(null);
       setMemos([]);
+      setMessages([]);
     }
   };
 
   return (
-    <main className="h-screen h-[svh] bg-[#0a0a0a] text-white flex flex-col items-center overflow-hidden">
+    <main className="h-screen h-[svh] bg-[#f8f9fa] text-[#1a1a1a] flex flex-col items-center overflow-hidden">
       {loading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -220,7 +244,7 @@ export default function Home() {
       </div>
 
       {view !== 'CHAT' && (
-        <footer className="w-full py-6 text-gray-600 text-[10px] md:text-sm flex flex-col items-center space-y-1 bg-[#0a0a0a] border-t border-white/5">
+        <footer className="w-full py-6 text-gray-400 text-[10px] md:text-sm flex flex-col items-center space-y-1 bg-[#f8f9fa] border-t border-black/5">
           <div className="flex items-center space-x-2 md:space-x-4">
             <span>{t.footer1}</span>
             <span className="opacity-30">•</span>
