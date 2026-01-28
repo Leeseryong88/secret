@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls, useMotionValue, useTransform } from 'framer-motion';
 import { 
   Clock, 
   LogOut, 
@@ -66,28 +66,31 @@ export default function MemoCanvas({
 }: MemoCanvasProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
-  const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 1000, height: 1000 });
   
-  const canvasPosRef = useRef(canvasPos);
-  const scaleRef = useRef(scale);
+  // Use MotionValues for smooth, high-frequency updates without re-renders
+  const canvasX = useMotionValue(0);
+  const canvasY = useMotionValue(0);
+  const canvasScale = useMotionValue(1);
+
+  // For React components that need to react to these changes (like Minimap)
+  const [syncState, setSyncState] = useState({ x: 0, y: 0, scale: 1 });
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
   const canvasDragControls = useDragControls();
   const dragStartPos = useRef<{ x: number, y: number } | null>(null);
   const t = translations[lang];
 
-  const memoColors = [
-    '#fef3c7', '#dcfce7', '#dbeafe', '#fce7f3', '#f3f4f6', '#ede9fe',
-  ];
+  const memoColors = ['#fef3c7', '#dcfce7', '#dbeafe', '#fce7f3', '#f3f4f6', '#ede9fe'];
 
-  // Keep refs in sync with state
+  // Update sync state for Minimap
   useEffect(() => {
-    canvasPosRef.current = canvasPos;
-    scaleRef.current = scale;
-  }, [canvasPos, scale]);
+    const unsubX = canvasX.on('change', (v) => setSyncState(s => ({ ...s, x: v })));
+    const unsubY = canvasY.on('change', (v) => setSyncState(s => ({ ...s, y: v })));
+    const unsubS = canvasScale.on('change', (v) => setSyncState(s => ({ ...s, scale: v })));
+    return () => { unsubX(); unsubY(); unsubS(); };
+  }, [canvasX, canvasY, canvasScale]);
 
   useEffect(() => {
     const updateSize = () => {
@@ -103,7 +106,7 @@ export default function MemoCanvas({
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Use refs in wheel listener to avoid stale closure
+  // Wheel zoom logic
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -111,34 +114,36 @@ export default function MemoCanvas({
     const handleWheelRaw = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        const zoomSpeed = 0.001;
+        const zoomSpeed = 0.0015;
         const delta = -e.deltaY * zoomSpeed;
         
-        const currentScale = scaleRef.current;
-        const currentPos = canvasPosRef.current;
+        const currentScale = canvasScale.get();
         const newScale = Math.min(Math.max(0.1, currentScale + delta), 5);
         
         if (newScale === currentScale) return;
 
-        // Zoom toward mouse cursor
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        const gridX = (mouseX - currentPos.x) / currentScale;
-        const gridY = (mouseY - currentPos.y) / currentScale;
+        // Coordinates in the grid before zoom
+        const gridX = (mouseX - canvasX.get()) / currentScale;
+        const gridY = (mouseY - canvasY.get()) / currentScale;
 
-        const newPosX = mouseX - gridX * newScale;
-        const newPosY = mouseY - gridY * newScale;
-
-        setScale(newScale);
-        setCanvasPos({ x: newPosX, y: newPosY });
+        // New canvas position to keep gridX/Y under the mouse
+        canvasX.set(mouseX - gridX * newScale);
+        canvasY.set(mouseY - gridY * newScale);
+        canvasScale.set(newScale);
+      } else {
+        // Normal scroll panned
+        canvasX.set(canvasX.get() - e.deltaX);
+        canvasY.set(canvasY.get() - e.deltaY);
       }
     };
 
     container.addEventListener('wheel', handleWheelRaw, { passive: false });
     return () => container.removeEventListener('wheel', handleWheelRaw);
-  }, []);
+  }, [canvasX, canvasY, canvasScale]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -149,7 +154,8 @@ export default function MemoCanvas({
   }, [room.expiresAt]);
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    if (e.target === containerRef.current || e.target === canvasRef.current || (e.target as HTMLElement).id === 'grid-bg') {
+    const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'grid-bg';
+    if (isBg) {
       dragStartPos.current = { x: e.clientX, y: e.clientY };
       canvasDragControls.start(e);
     }
@@ -159,7 +165,8 @@ export default function MemoCanvas({
     if (!dragStartPos.current) return;
     const distance = Math.sqrt(Math.pow(e.clientX - dragStartPos.current.x, 2) + Math.pow(e.clientY - dragStartPos.current.y, 2));
     if (distance < 5) {
-      if (e.target === containerRef.current || e.target === canvasRef.current || (e.target as HTMLElement).id === 'grid-bg') {
+      const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'grid-bg';
+      if (isBg) {
         const rect = containerRef.current!.getBoundingClientRect();
         setShowColorPicker({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       } else {
@@ -169,26 +176,11 @@ export default function MemoCanvas({
     dragStartPos.current = null;
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    if (showColorPicker) {
-      e.preventDefault();
-      setShowColorPicker(null);
-    }
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) {
-      setCanvasPos(prev => ({
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY
-      }));
-    }
-  };
-
   const createMemo = (color: string) => {
     if (!showColorPicker) return;
-    const x = (showColorPicker.x - canvasPos.x) / scale;
-    const y = (showColorPicker.y - canvasPos.y) / scale;
+    const scale = canvasScale.get();
+    const x = (showColorPicker.x - canvasX.get()) / scale;
+    const y = (showColorPicker.y - canvasY.get()) / scale;
     const maxZ = memos.length > 0 ? Math.max(...memos.map(m => m.zIndex || 0)) : 0;
     onAddMemo({
       text: '', x: x - 100, y: y - 75, width: 200, height: 150, zIndex: maxZ + 1,
@@ -197,20 +189,14 @@ export default function MemoCanvas({
     setShowColorPicker(null);
   };
 
-  const copyRoomId = () => {
-    navigator.clipboard.writeText(room.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="flex flex-col h-full w-full bg-[#f8f9fa] overflow-hidden relative">
       <div className="absolute top-0 left-0 right-0 p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-30 pointer-events-none">
         <div className="flex items-center space-x-3 pointer-events-auto text-black">
-          <div className="min-w-0">
+          <div className="min-w-0 text-left">
             <h3 className="font-bold text-sm md:text-lg leading-tight truncate">{room.name || room.id}</h3>
             <div className="flex items-center text-[10px] md:text-xs text-gray-500 mt-0.5">
-              <button onClick={copyRoomId} className="flex items-center hover:text-black transition-colors mr-3">
+              <button onClick={() => { navigator.clipboard.writeText(room.id); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="flex items-center hover:text-black transition-colors mr-3">
                 {room.id} {copied ? <Check size={10} className="ml-1 text-emerald-600" /> : <Copy size={10} className="ml-1" />}
               </button>
               <div className="flex items-center text-orange-600 font-medium"><Clock size={10} className="mr-1" /> {formatTimeLeft(timeLeft)}</div>
@@ -218,7 +204,7 @@ export default function MemoCanvas({
           </div>
         </div>
         <div className="flex items-center space-x-2 pointer-events-auto">
-          <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">{Math.round(scale * 100)}%</div>
+          <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">{Math.round(syncState.scale * 100)}%</div>
           {timeLeft > 0 && timeLeft <= 7200 && (
             <button onClick={onExtend} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
           )}
@@ -231,21 +217,22 @@ export default function MemoCanvas({
         className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
         onPointerDown={handleCanvasPointerDown}
         onPointerUp={handleCanvasPointerUp}
-        onContextMenu={handleContextMenu}
-        onWheel={handleWheel}
+        onContextMenu={(e) => { if (showColorPicker) { e.preventDefault(); setShowColorPicker(null); } }}
       >
         <motion.div
-          ref={canvasRef}
           drag dragControls={canvasDragControls} dragListener={false} dragMomentum={false}
-          onDrag={(e, info) => setCanvasPos(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
+          onDrag={(e, info) => {
+            canvasX.set(canvasX.get() + info.delta.x);
+            canvasY.set(canvasY.get() + info.delta.y);
+          }}
           className="absolute inset-0"
-          style={{ x: canvasPos.x, y: canvasPos.y, scale, transformOrigin: '0 0' }}
+          style={{ x: canvasX, y: canvasY, scale: canvasScale, transformOrigin: '0 0' }}
         >
           <div id="grid-bg" className="absolute inset-0 pointer-events-none opacity-[0.2]" 
             style={{ backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', backgroundSize: '40px 40px', width: '100000px', height: '100000px', transform: 'translate(-50000px, -50000px)' }} 
           />
           {memos.map((memo) => (
-            <StickyNote key={memo.id} memo={memo} scale={scale} onUpdate={(updates) => onUpdateMemo(memo.id, updates)} onDelete={() => onDeleteMemo(memo.id)} />
+            <StickyNote key={memo.id} memo={memo} canvasScale={canvasScale} onUpdate={(updates) => onUpdateMemo(memo.id, updates)} onDelete={() => onDeleteMemo(memo.id)} />
           ))}
         </motion.div>
 
@@ -259,27 +246,35 @@ export default function MemoCanvas({
           )}
         </AnimatePresence>
 
-        <Minimap memos={memos} canvasPos={canvasPos} scale={scale} viewportSize={viewportSize} onJump={(newPos) => setCanvasPos(newPos)} />
+        <Minimap 
+          memos={memos} 
+          canvasX={canvasX} 
+          canvasY={canvasY} 
+          canvasScale={canvasScale} 
+          syncState={syncState}
+          viewportSize={viewportSize} 
+        />
       </div>
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm text-center leading-tight">Click to create memo • Drag to pan • Ctrl+Scroll to zoom</div>
     </div>
   );
 }
 
-function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Memo[], canvasPos: { x: number, y: number }, scale: number, viewportSize: { width: number, height: number }, onJump: (pos: { x: number, y: number }) => void }) {
+function Minimap({ memos, canvasX, canvasY, canvasScale, syncState, viewportSize }: any) {
   const mapSize = 150;
   const containerRef = useRef<HTMLDivElement>(null);
   
   const bounds = useMemo(() => {
-    const viewX = -canvasPos.x / scale;
-    const viewY = -canvasPos.y / scale;
+    const { x, y, scale } = syncState;
+    const viewX = -x / scale;
+    const viewY = -y / scale;
     const viewW = viewportSize.width / scale;
     const viewH = viewportSize.height / scale;
 
-    const allX = memos.length > 0 ? memos.map(m => m.x) : [0];
-    const allY = memos.length > 0 ? memos.map(m => m.y) : [0];
-    const allXEnd = memos.length > 0 ? memos.map(m => m.x + m.width) : [1000];
-    const allYEnd = memos.length > 0 ? memos.map(m => m.y + m.height) : [1000];
+    const allX = memos.length > 0 ? memos.map((m:any) => m.x) : [0];
+    const allY = memos.length > 0 ? memos.map((m:any) => m.y) : [0];
+    const allXEnd = memos.length > 0 ? memos.map((m:any) => m.x + m.width) : [1000];
+    const allYEnd = memos.length > 0 ? memos.map((m:any) => m.y + m.height) : [1000];
 
     const minX = Math.min(viewX, ...allX) - 200;
     const minY = Math.min(viewY, ...allY) - 200;
@@ -287,7 +282,7 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
     const maxY = Math.max(viewY + viewH, ...allYEnd) + 200;
     
     return { minX, minY, maxX, maxY };
-  }, [memos, canvasPos, scale, viewportSize]);
+  }, [memos, syncState, viewportSize]);
 
   const mapScale = mapSize / Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
   const toMapCoord = (x: number, y: number) => ({ x: (x - bounds.minX) * mapScale, y: (y - bounds.minY) * mapScale });
@@ -296,27 +291,25 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
     e.stopPropagation();
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
+    const scale = canvasScale.get();
     const targetCenterX = (e.clientX - rect.left) / mapScale + bounds.minX;
     const targetCenterY = (e.clientY - rect.top) / mapScale + bounds.minY;
     
-    // Calculate new position so that target center is in viewport center
-    const newCanvasX = -(targetCenterX - (viewportSize.width / scale) / 2) * scale;
-    const newCanvasY = -(targetCenterY - (viewportSize.height / scale) / 2) * scale;
-    
-    onJump({ x: newCanvasX, y: newCanvasY });
+    canvasX.set(-(targetCenterX - (viewportSize.width / scale) / 2) * scale);
+    canvasY.set(-(targetCenterY - (viewportSize.height / scale) / 2) * scale);
   };
 
   const vRect = { 
-    x: (-canvasPos.x / scale - bounds.minX) * mapScale, 
-    y: (-canvasPos.y / scale - bounds.minY) * mapScale, 
-    w: (viewportSize.width / scale) * mapScale, 
-    h: (viewportSize.height / scale) * mapScale 
+    x: (-syncState.x / syncState.scale - bounds.minX) * mapScale, 
+    y: (-syncState.y / syncState.scale - bounds.minY) * mapScale, 
+    w: (viewportSize.width / syncState.scale) * mapScale, 
+    h: (viewportSize.height / syncState.scale) * mapScale 
   };
 
   return (
     <div ref={containerRef} className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-md border border-black/10 rounded-lg shadow-2xl overflow-hidden cursor-crosshair z-20 pointer-events-auto ring-1 ring-black/5" style={{ width: mapSize, height: mapSize }} onPointerDown={handleMapClick}>
       <div className="relative w-full h-full pointer-events-none">
-        {memos.map(m => {
+        {memos.map((m: any) => {
           const c = toMapCoord(m.x, m.y);
           return <div key={m.id} className="absolute rounded-[1px]" style={{ left: c.x, top: c.y, width: m.width * mapScale, height: m.height * mapScale, backgroundColor: m.style.color, border: '0.5px solid rgba(0,0,0,0.1)' }} />;
         })}
@@ -326,51 +319,50 @@ function Minimap({ memos, canvasPos, scale, viewportSize, onJump }: { memos: Mem
   );
 }
 
-function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: number; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
+function StickyNote({ memo, canvasScale, onUpdate, onDelete }: any) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const dragControls = useDragControls();
   const [localSize, setLocalSize] = useState({ width: memo.width, height: memo.height });
 
-  useEffect(() => {
-    setLocalSize({ width: memo.width, height: memo.height });
-  }, [memo.width, memo.height]);
+  useEffect(() => { setLocalSize({ width: memo.width, height: memo.height }); }, [memo.width, memo.height]);
 
   return (
     <motion.div
       drag dragControls={dragControls} dragListener={false} dragMomentum={false}
-      onDragEnd={(e, info) => onUpdate({ x: memo.x + info.offset.x / scale, y: memo.y + info.offset.y / scale })}
+      onDragEnd={(e, info) => {
+        const s = canvasScale.get();
+        onUpdate({ x: memo.x + info.offset.x / s, y: memo.y + info.offset.y / s });
+      }}
       animate={{ x: memo.x, y: memo.y, zIndex: memo.zIndex || 0 }}
       className="absolute group shadow-xl hover:shadow-2xl transition-shadow duration-200 overflow-visible cursor-default"
       style={{ width: localSize.width, height: localSize.height }}
     >
-      <div className="w-full h-full flex flex-col rounded-md overflow-hidden ring-1 ring-black/5" style={{ backgroundColor: memo.style.color, color: '#333' }}>
+      <div className="w-full h-full flex flex-col rounded-md overflow-hidden ring-1 ring-black/5 shadow-inner" style={{ backgroundColor: memo.style.color, color: '#333' }}>
         <div className="h-7 flex items-center justify-between px-2 cursor-grab active:cursor-grabbing border-b border-black/5 flex-shrink-0" onPointerDown={(e) => { e.stopPropagation(); dragControls.start(e); }}>
           <div className="flex items-center space-x-1" onPointerDown={(e) => e.stopPropagation()}>
-            <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, isBold: !memo.style.isBold } }); }} className={cn("p-1 rounded hover:bg-black/10 transition-colors", memo.style.isBold && "bg-black/10")}><Bold size={12} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, isBold: !memo.style.isBold } }); }} className={cn("p-1 rounded hover:bg-black/10", memo.style.isBold && "bg-black/10")}><Bold size={12} /></button>
             <div className="flex items-center bg-black/5 rounded-md px-1">
               <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.max(8, memo.style.fontSize - 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronDown size={12} /></button>
               <span className="text-[10px] font-bold px-1 min-w-[16px] text-center">{memo.style.fontSize}</span>
               <button onClick={(e) => { e.stopPropagation(); onUpdate({ style: { ...memo.style, fontSize: Math.min(72, memo.style.fontSize + 2) } }); }} className="p-0.5 hover:bg-black/10 rounded"><ChevronUp size={12} /></button>
             </div>
           </div>
-          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 rounded hover:bg-black/10 text-red-600 transition-colors"><Trash2 size={12} /></button>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 rounded hover:bg-black/10 text-red-600"><Trash2 size={12} /></button>
         </div>
-        <textarea ref={textRef} value={memo.text} onPointerDown={(e) => e.stopPropagation()} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Type something..." className="flex-1 w-full p-3 bg-transparent outline-none resize-none overflow-auto scrollbar-none" style={{ fontSize: `${memo.style.fontSize}px`, fontWeight: memo.style.isBold ? 'bold' : 'normal', lineHeight: 1.4 }} />
+        <textarea ref={textRef} value={memo.text} onPointerDown={(e) => e.stopPropagation()} onChange={(e) => onUpdate({ text: e.target.value })} placeholder="Type..." className="flex-1 w-full p-3 bg-transparent outline-none resize-none overflow-auto scrollbar-none" style={{ fontSize: `${memo.style.fontSize}px`, fontWeight: memo.style.isBold ? 'bold' : 'normal', lineHeight: 1.4 }} />
         <div 
           className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
           onPointerDown={(e) => {
             e.preventDefault(); e.stopPropagation();
             const startX = e.clientX; const startY = e.clientY;
             const startW = localSize.width; const startH = localSize.height;
-            let currentW = startW; let currentH = startH;
             const onMove = (pe: PointerEvent) => {
-              currentW = Math.max(100, startW + (pe.clientX - startX) / scale);
-              currentH = Math.max(80, startH + (pe.clientY - startY) / scale);
-              setLocalSize({ width: currentW, height: currentH });
+              const s = canvasScale.get();
+              setLocalSize({ width: Math.max(100, startW + (pe.clientX - startX) / s), height: Math.max(80, startH + (pe.clientY - startY) / s) });
             };
             const onUp = () => {
               window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
-              onUpdate({ width: currentW, height: currentH });
+              onUpdate({ width: localSize.width, height: localSize.height });
             };
             window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
           }}
