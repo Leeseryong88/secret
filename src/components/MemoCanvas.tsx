@@ -66,8 +66,10 @@ export default function MemoCanvas({
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
 
   const memoColors = [
@@ -88,23 +90,38 @@ export default function MemoCanvas({
   }, [room.expiresAt]);
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target !== containerRef.current) {
+    // Check if clicking the container or the canvas div (not a memo)
+    if (e.target !== containerRef.current && e.target !== canvasRef.current) {
       setShowColorPicker(null);
       return;
     }
     
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = containerRef.current!.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     setShowColorPicker({ x, y });
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      const zoomSpeed = 0.001;
+      const newScale = Math.min(Math.max(0.1, scale - e.deltaY * zoomSpeed), 5);
+      setScale(newScale);
+    } else {
+      setCanvasPos(prev => ({
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY
+      }));
+    }
+  };
+
   const createMemo = (color: string) => {
     if (!showColorPicker) return;
 
-    const x = showColorPicker.x - canvasPos.x;
-    const y = showColorPicker.y - canvasPos.y;
+    // Adjust coordinates based on current pan and scale
+    const x = (showColorPicker.x - canvasPos.x) / scale;
+    const y = (showColorPicker.y - canvasPos.y) / scale;
 
     onAddMemo({
       text: '',
@@ -152,6 +169,9 @@ export default function MemoCanvas({
         </div>
 
         <div className="flex items-center space-x-2">
+          <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">
+            {Math.round(scale * 100)}%
+          </div>
           {showExtendButton && (
             <button
               onClick={onExtend}
@@ -172,24 +192,31 @@ export default function MemoCanvas({
       {/* Canvas */}
       <div 
         ref={containerRef}
-        className="flex-1 w-full h-full cursor-crosshair relative overflow-hidden"
+        className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
         onClick={handleCanvasClick}
+        onWheel={handleWheel}
       >
         <motion.div
+          ref={canvasRef}
           drag
           dragMomentum={false}
           onDrag={(e, info) => setCanvasPos(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
           className="absolute inset-0"
-          style={{ x: canvasPos.x, y: canvasPos.y }}
+          style={{ 
+            x: canvasPos.x, 
+            y: canvasPos.y,
+            scale: scale,
+            transformOrigin: '0 0'
+          }}
         >
           {/* Grid Background */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.2]" 
             style={{ 
               backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', 
               backgroundSize: '40px 40px',
-              width: '10000px',
-              height: '10000px',
-              transform: 'translate(-5000px, -5000px)'
+              width: '100000px',
+              height: '100000px',
+              transform: 'translate(-50000px, -50000px)'
             }} 
           />
 
@@ -197,6 +224,7 @@ export default function MemoCanvas({
             <StickyNote 
               key={memo.id} 
               memo={memo} 
+              scale={scale}
               onUpdate={(updates) => onUpdateMemo(memo.id, updates)}
               onDelete={() => onDeleteMemo(memo.id)}
             />
@@ -227,14 +255,14 @@ export default function MemoCanvas({
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm">
-        Click anywhere to choose a color and create a memo • Drag canvas to pan
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/80 backdrop-blur-xl border border-black/5 rounded-full text-[10px] text-gray-500 z-30 pointer-events-none shadow-sm text-center">
+        Click to create memo • Drag to pan • Ctrl+Scroll to zoom
       </div>
     </div>
   );
 }
 
-function StickyNote({ memo, onUpdate, onDelete }: { memo: Memo; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
+function StickyNote({ memo, scale, onUpdate, onDelete }: { memo: Memo; scale: number; onUpdate: (updates: Partial<Memo>) => void; onDelete: () => void }) {
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
@@ -243,11 +271,15 @@ function StickyNote({ memo, onUpdate, onDelete }: { memo: Memo; onUpdate: (updat
       drag
       dragMomentum={false}
       onDragEnd={(e, info) => {
-        onUpdate({ x: memo.x + info.offset.x, y: memo.y + info.offset.y });
+        // Correct position based on drag info and current scale
+        onUpdate({ 
+          x: memo.x + info.offset.x / scale, 
+          y: memo.y + info.offset.y / scale 
+        });
       }}
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1, x: memo.x, y: memo.y }}
-      className="absolute group shadow-2xl overflow-visible"
+      className="absolute group shadow-2xl overflow-visible cursor-default"
       style={{ width: memo.width, height: memo.height }}
     >
       <div 
@@ -303,8 +335,9 @@ function StickyNote({ memo, onUpdate, onDelete }: { memo: Memo; onUpdate: (updat
 
         {/* Resize Handle */}
         <div 
-          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
           onMouseDown={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             const startX = e.clientX;
             const startY = e.clientY;
@@ -312,8 +345,8 @@ function StickyNote({ memo, onUpdate, onDelete }: { memo: Memo; onUpdate: (updat
             const startHeight = memo.height;
 
             const onMouseMove = (moveEvent: MouseEvent) => {
-              const deltaX = moveEvent.clientX - startX;
-              const deltaY = moveEvent.clientY - startY;
+              const deltaX = (moveEvent.clientX - startX) / scale;
+              const deltaY = (moveEvent.clientY - startY) / scale;
               onUpdate({ 
                 width: Math.max(100, startWidth + deltaX),
                 height: Math.max(80, startHeight + deltaY)
