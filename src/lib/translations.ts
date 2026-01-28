@@ -19,7 +19,7 @@ export const translations = {
     enter: 'Enter',
     messagePlaceholder: 'Message...',
     nickname: 'Nickname',
-    extend: 'Extend 4h',
+    extend: 'Extend',
     leave: 'Leave',
     leaveConfirm: 'Leave the chat room?',
     copyId: 'ID copied',
@@ -37,6 +37,9 @@ export const translations = {
     invalidPassword: 'Invalid password.',
     roomNotFound: 'Room not found.',
     expiredRoom: 'Room has expired.',
+    extendOnlyWithin24h: 'Can only extend within 24 hours of expiration.',
+    maxExtend7Days: 'Can only extend up to 7 days from now.',
+    participants: 'Participants',
   },
   ko: {
     create: '만들기',
@@ -56,7 +59,7 @@ export const translations = {
     enter: '입장하기',
     messagePlaceholder: '메시지 입력...',
     nickname: '닉네임',
-    extend: '4시간 연장',
+    extend: '연장하기',
     leave: '나가기',
     leaveConfirm: '채팅방을 나가시겠습니까?',
     copyId: 'ID 복사됨',
@@ -74,5 +77,8 @@ export const translations = {
     invalidPassword: '비밀번호가 틀렸습니다.',
     roomNotFound: '방을 찾을 수 없습니다.',
     expiredRoom: '만료된 방입니다.',
+    extendOnlyWithin24h: '만료 24시간 이내에만 연장 가능합니다.',
+    maxExtend7Days: '최대 7일까지만 연장 가능합니다.',
+    participants: '참여자',
   }
 };

@@ -42,6 +42,7 @@ interface MemoCanvasProps {
     expiresAt: number;
   };
   memos: Memo[];
+  activeUsers: { id: string; nickname: string }[];
   currentUser: {
     id: string;
     nickname: string;
@@ -57,6 +58,7 @@ export default function MemoCanvas({
   lang,
   room,
   memos,
+  activeUsers,
   currentUser,
   onAddMemo,
   onUpdateMemo,
@@ -68,6 +70,7 @@ export default function MemoCanvas({
   const [copied, setCopied] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState<{ x: number, y: number } | null>(null);
   const [showExtendPicker, setShowExtendPicker] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
   const [extendVal, setExtendVal] = useState(24);
   const [extendUnit, setExtendUnit] = useState<'h' | 'd'>('h');
   const [viewportSize, setViewportSize] = useState({ width: 1000, height: 1000 });
@@ -228,10 +231,61 @@ export default function MemoCanvas({
           </div>
         </div>
         <div className="flex items-center space-x-2 pointer-events-auto relative">
+          <div className="relative">
+            <button 
+              onClick={() => setShowParticipants(!showParticipants)}
+              className="flex items-center space-x-1 px-2 py-1 bg-black/5 hover:bg-black/10 rounded-lg text-[10px] md:text-xs font-medium text-gray-600 transition-colors"
+            >
+              <Users size={12} />
+              <span>{activeUsers.length}</span>
+            </button>
+            
+            <AnimatePresence>
+              {showParticipants && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, y: 10 }} 
+                  className="absolute right-0 mt-2 p-3 bg-white rounded-xl shadow-2xl border border-black/5 w-48 z-[60]"
+                >
+                  <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{t.participants}</h4>
+                  <div className="max-h-48 overflow-y-auto space-y-1 scrollbar-none">
+                    {activeUsers.map((user) => (
+                      <div key={user.id} className="flex items-center space-x-2 py-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className={cn(
+                          "text-xs truncate",
+                          user.id === currentUser.id ? "font-bold text-blue-600" : "text-gray-700"
+                        )}>
+                          {user.nickname} {user.id === currentUser.id && "(Me)"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <div className="px-3 py-1 bg-black/5 rounded-lg text-[10px] font-medium text-gray-500">{Math.round(syncState.scale * 100)}%</div>
-          {timeLeft > 0 && timeLeft <= 86400 && (
+          {timeLeft > 0 && (
             <div className="relative">
-              <button onClick={() => setShowExtendPicker(!showExtendPicker)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
+              <button 
+                onClick={() => {
+                  if (timeLeft > 86400) {
+                    alert(t.extendOnlyWithin24h);
+                    return;
+                  }
+                  setShowExtendPicker(!showExtendPicker);
+                }} 
+                className={cn(
+                  "px-3 py-1.5 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors",
+                  timeLeft > 86400 
+                    ? "bg-gray-400 hover:bg-gray-500" 
+                    : "bg-orange-500 hover:bg-orange-600"
+                )}
+              >
+                {t.extend}
+              </button>
               
               <AnimatePresence>
                 {showExtendPicker && (
@@ -251,7 +305,16 @@ export default function MemoCanvas({
                     <button 
                       onClick={() => {
                         const mins = extendUnit === 'h' ? extendVal * 60 : extendVal * 24 * 60;
-                        if (mins > 0 && mins <= 10080) {
+                        const now = Date.now();
+                        const newExpiresAt = room.expiresAt + mins * 60 * 1000;
+                        const maxExpiresAt = now + 7 * 24 * 60 * 60 * 1000;
+
+                        if (newExpiresAt > maxExpiresAt) {
+                          alert(t.maxExtend7Days);
+                          return;
+                        }
+
+                        if (mins > 0) {
                           onExtend(mins / 60);
                           setShowExtendPicker(false);
                         }

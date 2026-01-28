@@ -20,6 +20,12 @@ service cloud.firestore {
         allow read, write: if request.auth != null && 
           get(/databases/$(database)/documents/rooms/$(roomId)).data.expiresAt > request.time;
       }
+      
+      match /users/{userId} {
+        // Can read and write user presence if the room is not expired
+        allow read, write: if request.auth != null && 
+          get(/databases/$(database)/documents/rooms/$(roomId)).data.expiresAt > request.time;
+      }
     }
   }
 }

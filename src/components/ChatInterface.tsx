@@ -22,6 +22,7 @@ interface ChatInterfaceProps {
     expiresAt: number;
   };
   messages: Message[];
+  activeUsers: { id: string; nickname: string }[];
   currentUser: {
     id: string;
     nickname: string;
@@ -36,6 +37,7 @@ export default function ChatInterface({
   lang,
   room,
   messages,
+  activeUsers,
   currentUser,
   onSendMessage,
   onUpdateNickname,
@@ -46,6 +48,7 @@ export default function ChatInterface({
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [showExtendPicker, setShowExtendPicker] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
   const [extendVal, setExtendVal] = useState(24);
   const [extendUnit, setExtendUnit] = useState<'h' | 'd'>('h');
   const [isEditingNickname, setIsEditingNickname] = useState(false);
@@ -97,8 +100,42 @@ export default function ChatInterface({
       {/* Header */}
       <div className="p-3 md:p-4 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-10">
         <div className="flex items-center space-x-3 text-black">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-600">
-            <Users size={20} />
+          <div className="relative">
+            <button 
+              onClick={() => setShowParticipants(!showParticipants)}
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-600 hover:bg-blue-600/20 transition-colors"
+            >
+              <Users size={20} />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                {activeUsers.length}
+              </div>
+            </button>
+
+            <AnimatePresence>
+              {showParticipants && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, y: 10 }} 
+                  className="absolute left-0 mt-2 p-3 bg-white rounded-xl shadow-2xl border border-black/5 w-48 z-[60]"
+                >
+                  <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{t.participants}</h4>
+                  <div className="max-h-48 overflow-y-auto space-y-1 scrollbar-none">
+                    {activeUsers.map((user) => (
+                      <div key={user.id} className="flex items-center space-x-2 py-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className={cn(
+                          "text-xs truncate",
+                          user.id === currentUser.id ? "font-bold text-blue-600" : "text-gray-700"
+                        )}>
+                          {user.nickname} {user.id === currentUser.id && "(Me)"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="min-w-0">
             <h3 className="font-bold text-sm md:text-lg leading-tight truncate">
@@ -115,9 +152,25 @@ export default function ChatInterface({
           </div>
         </div>
         <div className="flex items-center space-x-2 relative">
-          {timeLeft > 0 && timeLeft <= 86400 && (
+          {timeLeft > 0 && (
             <div className="relative">
-              <button onClick={() => setShowExtendPicker(!showExtendPicker)} className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors">{t.extend}</button>
+              <button 
+                onClick={() => {
+                  if (timeLeft > 86400) {
+                    alert(t.extendOnlyWithin24h);
+                    return;
+                  }
+                  setShowExtendPicker(!showExtendPicker);
+                }} 
+                className={cn(
+                  "px-3 py-1.5 text-white text-[10px] md:text-xs font-bold rounded-lg transition-colors",
+                  timeLeft > 86400 
+                    ? "bg-gray-400 hover:bg-gray-500" 
+                    : "bg-orange-500 hover:bg-orange-600"
+                )}
+              >
+                {t.extend}
+              </button>
               
               <AnimatePresence>
                 {showExtendPicker && (
@@ -138,7 +191,16 @@ export default function ChatInterface({
                       type="button"
                       onClick={() => {
                         const mins = extendUnit === 'h' ? extendVal * 60 : extendVal * 24 * 60;
-                        if (mins > 0 && mins <= 10080) {
+                        const now = Date.now();
+                        const newExpiresAt = room.expiresAt + mins * 60 * 1000;
+                        const maxExpiresAt = now + 7 * 24 * 60 * 60 * 1000;
+
+                        if (newExpiresAt > maxExpiresAt) {
+                          alert(t.maxExtend7Days);
+                          return;
+                        }
+
+                        if (mins > 0) {
                           onExtend(mins / 60);
                           setShowExtendPicker(false);
                         }

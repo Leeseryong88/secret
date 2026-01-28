@@ -160,6 +160,36 @@ export async function deleteMemo(roomId: string, memoId: string) {
   await deleteDoc(memoRef);
 }
 
+export async function updateUserPresence(roomId: string, userId: string, nickname: string) {
+  if (!roomId || !userId) return;
+  const userRef = doc(db, 'rooms', roomId, 'users', userId);
+  await setDoc(userRef, {
+    id: userId,
+    nickname,
+    lastSeen: serverTimestamp(),
+  }, { merge: true });
+}
+
+export function subscribeUsers(roomId: string, callback: (users: any[]) => void) {
+  const q = query(
+    collection(db, 'rooms', roomId, 'users'),
+    orderBy('lastSeen', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const now = Date.now();
+    const users = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        lastSeen: doc.data().lastSeen?.toMillis() || now,
+      }))
+      // Filter users seen in the last 2 minutes
+      .filter(u => now - u.lastSeen < 120000);
+    callback(users);
+  });
+}
+
 export async function extendRoom(roomId: string, hours: number) {
   const roomRef = doc(db, 'rooms', roomId);
   const roomDoc = await getDoc(roomRef);

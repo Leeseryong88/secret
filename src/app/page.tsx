@@ -20,6 +20,7 @@ export default function Home() {
   const [room, setRoom] = useState<any>(null);
   const [memos, setMemos] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     id: '',
@@ -71,6 +72,29 @@ export default function Home() {
       }
     }
   }, [view, room?.id, room?.type]);
+
+  // Subscribe to active users
+  useEffect(() => {
+    if (view === 'CHAT' && room?.id) {
+      const unsubscribe = chatApi.subscribeUsers(room.id, (users) => {
+        setActiveUsers(users);
+      });
+      return () => unsubscribe();
+    }
+  }, [view, room?.id]);
+
+  // Update user presence periodically
+  useEffect(() => {
+    if (view === 'CHAT' && room?.id && currentUser.id) {
+      const updatePresence = () => {
+        chatApi.updateUserPresence(room.id, currentUser.id, currentUser.nickname);
+      };
+      
+      updatePresence();
+      const interval = setInterval(updatePresence, 30000); // Update every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [view, room?.id, currentUser.id, currentUser.nickname]);
 
   const handleCreateRoom = async (data: { name: string; expiresHours: number; password: string; type: 'chat' | 'memo' }) => {
     setLoading(true);
@@ -219,6 +243,7 @@ export default function Home() {
                   lang={lang}
                   room={room}
                   memos={memos}
+                  activeUsers={activeUsers}
                   currentUser={currentUser}
                   onAddMemo={handleAddMemo}
                   onUpdateMemo={handleUpdateMemo}
@@ -231,6 +256,7 @@ export default function Home() {
                   lang={lang}
                   room={room}
                   messages={messages}
+                  activeUsers={activeUsers}
                   currentUser={currentUser}
                   onSendMessage={handleSendMessage}
                   onUpdateNickname={handleUpdateNickname}
